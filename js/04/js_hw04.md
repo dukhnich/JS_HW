@@ -22,7 +22,7 @@ let body = {
                 },
                 {
                     name: "input",
-                    attr: {
+                    atr: {
                         id: "name",
                         type: "text"
                     },
@@ -30,7 +30,7 @@ let body = {
                 },
                 {
                     name: "input",
-                    attr: {
+                    atr: {
                         id: "surname",
                         type: "text"
                     },
@@ -44,7 +44,7 @@ let body = {
             children: [
                 {
                     name: "button",
-                    attr: {
+                    atr: {
                         id: "ok"
                     },
                     children: [],
@@ -52,7 +52,7 @@ let body = {
                 },
                 {
                     name: "button",
-                    attr: {
+                    atr: {
                         id: "cancel"
                     },
                     children: [],
@@ -63,7 +63,7 @@ let body = {
     ]
 }
 console.log (body.children[1].children[1].content)
-console.log (body.children[0].children[3].attr.id)
+console.log (body.children[0].children[3].atr.id)
 ```
 
 ## declarative fields
