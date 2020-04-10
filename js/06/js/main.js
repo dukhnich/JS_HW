@@ -10,18 +10,12 @@ function validatedNumbersInArray(...arr){
 }
 
 function convertToNumberInArray(){
-    let arr = [...arguments]
-    for (let i=0; i<arr.length; i++) {
-        arr[i] = +arr[i]
-    }
-    return arr
+    return [...arguments].map((a) => +a)
 }
 
 function prepareArrayWithNumbers (){ //A there only numbers && convert to the type Numbers
     if (!validatedNumbersInArray(...arguments)) {return}
-    let arr = [...arguments]
-    arr = convertToNumberInArray(...arr)
-    return arr
+    return convertToNumberInArray(...arguments)
 }
 
 //es6 function to es5
