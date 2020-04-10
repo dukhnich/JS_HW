@@ -208,7 +208,9 @@ const createHtmlTree = function (objectHtml, tag, attr, content, children) { //o
             strHtmlTree += createHtmlTree(objectHtml[children][i], tag, attr, content, children)
         }
     }
-    strHtmlTree += `</${objectHtml[tag]}>`
+    if (undefined !== objectHtml[content] || objectHtml[children].length > 0) {
+        strHtmlTree += `</${objectHtml[tag]}>`
+    }
     return strHtmlTree;
 }
 
