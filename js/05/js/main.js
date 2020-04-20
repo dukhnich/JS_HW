@@ -196,7 +196,7 @@ const createHtmlTree = function (objectHtml, tag, attr, content, children) { //o
     strHtmlTree += `<${objectHtml[tag]}`
     if (attr in objectHtml) {
         for (let key in objectHtml[attr]) {
-            strHtmlTree += ` ${key} = ${objectHtml[attr][key]}`
+            strHtmlTree += ` ${key} = "${objectHtml[attr][key]}"`
         }
     }
     strHtmlTree += `>`
