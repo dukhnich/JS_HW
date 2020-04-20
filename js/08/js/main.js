@@ -1,55 +1,99 @@
 //multiply table to DOM
-function changeBgColor(element){
-    let parentColor = element.parentElement.getAttribute ("bgcolor");
-    let columnNumber = element.cellIndex;
-    element.onmouseover = function (event){
-        for (let i of element.parentElement.parentElement.children) {
-            i.children[columnNumber].setAttribute("bgcolor", "lightblue");
-        }
-        this.parentElement.setAttribute("bgcolor", "lightblue");
-        this.setAttribute("bgcolor", "yellow");
-    }
-    element.onmouseout = function (event){
-        for (let i of element.parentElement.parentElement.children) {
-            (i % 2) ?
-                i.children[columnNumber].setAttribute("bgcolor", parentColor) :
-                i.children[columnNumber].removeAttribute("bgcolor");
-        }
-        parentColor ?
-            this.parentElement.setAttribute("bgcolor", parentColor) :
-            this.parentElement.removeAttribute("bgcolor");
-        this.removeAttribute("bgcolor");
+// function changeBgColor(element){
+//     let parentColor = element.parentElement.getAttribute ("bgcolor");
+//     let columnNumber = element.cellIndex;
+//     element.onmouseover = function (event){
+//         for (let i of element.parentElement.parentElement.children) {
+//             i.children[columnNumber].setAttribute("bgcolor", "lightblue");
+//         }
+//         this.parentElement.setAttribute("bgcolor", "lightblue");
+//         this.setAttribute("bgcolor", "yellow");
+//     }
+//     element.onmouseout = function (event){
+//         for (let i of element.parentElement.parentElement.children) {
+//             (i % 2) ?
+//                 i.children[columnNumber].setAttribute("bgcolor", parentColor) :
+//                 i.children[columnNumber].removeAttribute("bgcolor");
+//         }
+//         parentColor ?
+//             this.parentElement.setAttribute("bgcolor", parentColor) :
+//             this.parentElement.removeAttribute("bgcolor");
+//         this.removeAttribute("bgcolor");
+//     }
+// }
+
+//const matrixToDOMTable = function (userMatrix=[]) {
+//     let table= document.createElement('table')
+//     table.setAttribute("class", "table ");
+//     for (let i = 0; i < userMatrix.length; i++){
+//         let tr = document.createElement('tr')
+//         if (i%2) {
+//             tr.setAttribute("bgcolor", "lightgrey");
+//         }
+//         for (let j = 0; j < userMatrix[i].length; j++){
+//             if (0 === i || 0 === j) {
+//                 let th= document.createElement('th');
+//                 th.setAttribute("class", "table-dark");
+//                 th.innerText = userMatrix[i][j];
+//                 tr.appendChild(th);
+//             }
+//             else {
+//                 let td = document.createElement('td')
+//                 td.innerText = userMatrix[i][j];
+//                 tr.appendChild(td);
+//                 changeBgColor(td)
+//             }
+//         }
+//         table.appendChild(tr);
+//     }
+//     return table
+// }
+
+function createTrCreator(handler = function (i, tbl, tr) {return tr}) { //abstract function for create tr, where handler is current function for attributes for tr
+    return function (i, tbl, iMax, jMax) {
+        let tr = document.createElement('tr');
+        tr = handler (i, tbl, tr, iMax, jMax);
+        tbl.appendChild(tr);
+        return tr
     }
 }
 
-const matrixToDOMTable = function (userMatrix=[]) {
-    let table= document.createElement('table')
-    table.setAttribute("class", "table ");
-    for (let i = 0; i < userMatrix.length; i++){
-        let tr= document.createElement('tr')
-        if (i%2) {
-            tr.setAttribute("bgcolor", "lightgrey");
-        }
-        for (let j = 0; j < userMatrix[i].length; j++){
-            if (0 === i || 0 === j) {
-                let th= document.createElement('th');
-                th.setAttribute("class", "table-dark");
-                th.innerText = userMatrix[i][j];
-                tr.appendChild(th);
-            }
-            else {
-                let td = document.createElement('td')
-                td.innerText = userMatrix[i][j];
-                tr.appendChild(td);
-                changeBgColor(td)
-            }
-        }
-        table.appendChild(tr);
+function createTdCreator(handler = function (i, j, tbl, tr, td) {return td}) { //abstract function for create td, where handler is current function for content and attributes for td
+    return function (i, j, tbl, tr, iMax, jMax) {
+        let td = document.createElement('td');
+        td = handler (i, j, tbl, tr, td, iMax, jMax);
+        tr.appendChild(td);
+        return td
     }
-    return table
 }
 
-let multiplyMatrix = [];
+function TableWorker (createTr = createTrCreator(), createTd = createTdCreator(), tdOMOver = function () {}, tdOMOut = function () {}, tdOClick = function () {}) { //abstract function-construction for functions for create table
+    this.createTr = createTr,
+    this.createTd = createTd,
+    this.tdOMOver = tdOMOver,
+    this.tdOMOut = tdOMOut,
+    this.tdOClick = tdOClick
+}
+
+function fillTable (tbl, iMax, jMax, {createTr, createTd, tdOMOver, tdOMOut, tdOClick} = (tableWorker = new TableWorker ())) { //function for fill the table with current functions
+    for (let i = 0; i < iMax; i++) {
+        let tr = createTr (i, tbl, iMax, jMax);
+        for (let j = 0; j < jMax; j++) {
+            let td = createTd (i, j, tbl, tr, iMax, jMax);
+            td.onmouseover = () => tdOMOver (i, j, tbl, tr, td, iMax, jMax);
+            td.onmouseout = () => tdOMOut (i, j, tbl, tr, td, iMax, jMax);
+            td.onclick = () => tdOClick (i, j, tbl, tr, td, iMax, jMax);
+        }
+    }
+    return tbl;
+}
+
+const fillTdText = (i,j, td, userMatrix) => { //current function for fill innerText for Td
+    td.innerText = userMatrix[i][j];
+    return td;
+};
+
+let multiplyMatrix = []; //current array for table
 for (let i = 0; i <= 10; i++){
     multiplyMatrix[i] = [];
     if (0 === i) {
@@ -65,11 +109,51 @@ for (let i = 0; i <= 10; i++){
     }
 }
 
-const wrapperMultiplyTable = document.querySelector("#DrawMultiplyTable .result")
-drawTable.onclick = () => {
-    wrapperMultiplyTable.innerHTML = ""
-    wrapperMultiplyTable.appendChild(matrixToDOMTable(multiplyMatrix))
+const createTrStripped = createTrCreator((i, tbl, tr, iMax, jMax) => { //current createTr
+    (i%2) && tr.setAttribute("bgcolor", "lightgrey");
+    return tr;
+})
+
+const createTdMultiply = createTdCreator((i, j, tbl, tr, td, iMax, jMax) => { //current createTd
+    if (0 === i || 0 === j) {
+        let th = document.createElement('th');
+        th.setAttribute("class", "table-dark");
+        td = th;
+    }
+        td.setAttribute("class", `${td.getAttribute('class')} row-${i} column-${j}`);
+        td = fillTdText(i, j, td, multiplyMatrix);
+        return td;
+})
+
+const tdOMOverCross = function (i, j, tbl, tr, td, iMax, jMax) { //current tdOMOver
+    var arrTdCross = document.querySelectorAll(`#multiplyTable .row-${i}, #multiplyTable .column-${j}`)
+    for (let item of arrTdCross) {
+        item.setAttribute("bgcolor", "lightblue");
+    }
 }
+
+const tdOMOutCross = function (i, j, tbl, tr, td, iMax, jMax) { //current tdOMOut
+    var arrTdCross = document.querySelectorAll(`#multiplyTable .row-${i}, #multiplyTable .column-${j}`)
+    for (let item of arrTdCross) {
+        item.removeAttribute("bgcolor");
+    }
+}
+const tdOClickCross = function (i, j, tbl, tr, td, iMax, jMax) { //current tdOClick
+    td.setAttribute("bgcolor", "yellow");
+}
+
+tableWorkerCross = new TableWorker (createTrStripped, createTdMultiply, tdOMOverCross, tdOMOutCross, tdOClickCross) //current tableWorker
+
+drawTable.onclick = () => {
+    multiplyTable = fillTable (multiplyTable, multiplyMatrix.length, multiplyMatrix[0].length, {createTr, createTd, tdOMOver, tdOMOut, tdOClick} = tableWorkerCross) // fill table with current array and functions
+}
+
+
+//const wrapperMultiplyTable = document.querySelector("#DrawMultiplyTable .result")
+//drawTable.onclick = () => {
+//    wrapperMultiplyTable.innerHTML = ""
+//    wrapperMultiplyTable.appendChild(matrixToDOMTable(multiplyMatrix))
+//}
 //var MultiplyTableTd = document.querySelectorAll("#DrawMultiplyTable .result td")
 //MultiplyTableTd.forEach(function(element){
 //    element.addEventListener('mouseover',changeBgColor)
@@ -113,7 +197,7 @@ sheetWidth.oninput = sheetWidth.oninput = sheetHeight.oninput = numberOfPagesInS
 //socket
 const socket = io("http://socketchat.fs.a-level.com.ua/")
 let messangerHistory = document.querySelector("#messanger .result")
-socket.on('msg', data => messangerHistory.prepend(addMsgToHistory (data.nick, data.message)))
+socket.on('msg', ({nick, message} = data) => messangerHistory.prepend(addMsgToHistory (nick, message)))
 sendMsgBtn.onclick = () => {
     socket.emit('msg', {nick: nickName.value, message: newMsg.value})
 }
