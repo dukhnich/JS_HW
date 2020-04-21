@@ -67,22 +67,21 @@ function createTdCreator(handler = function (i, j, tbl, tr, td) {return td}) { /
     }
 }
 
-function TableWorker (createTr = createTrCreator(), createTd = createTdCreator(), tdOMOver = function () {}, tdOMOut = function () {}, tdOClick = function () {}) { //abstract function-construction for functions for create table
+function TableWorker (createTr = createTrCreator(), createTd = createTdCreator(), tdEvents = {}) { //abstract function-construction for functions for create table
     this.createTr = createTr,
     this.createTd = createTd,
-    this.tdOMOver = tdOMOver,
-    this.tdOMOut = tdOMOut,
-    this.tdOClick = tdOClick
+    this.tdEvents = tdEvents // this is the object with items like "mousemove" : function (el) {console.log (el)},
 }
 
-function fillTable (tbl, iMax, jMax, {createTr, createTd, tdOMOver, tdOMOut, tdOClick} = (tableWorker = new TableWorker ())) { //function for fill the table with current functions
+function fillTable (tbl, iMax, jMax, {createTr, createTd, tdEvents} = (tableWorker = new TableWorker ())) { //function for fill the table with current functions
     for (let i = 0; i < iMax; i++) {
         let tr = createTr (i, tbl, iMax, jMax);
         for (let j = 0; j < jMax; j++) {
             let td = createTd (i, j, tbl, tr, iMax, jMax);
-            td.onmouseover = () => tdOMOver (i, j, tbl, tr, td, iMax, jMax);
-            td.onmouseout = () => tdOMOut (i, j, tbl, tr, td, iMax, jMax);
-            td.onclick = () => tdOClick (i, j, tbl, tr, td, iMax, jMax);
+            for (let event in tdEvents) {
+                td.addEventListener(event,() => tdEvents[event](i, j, tbl, tr, td, iMax, jMax))
+                //console.log(td[`on${event}`])
+            }
         }
     }
     return tbl;
@@ -142,10 +141,16 @@ const tdOClickCross = function (i, j, tbl, tr, td, iMax, jMax) { //current tdOCl
     td.setAttribute("bgcolor", "yellow");
 }
 
-tableWorkerCross = new TableWorker (createTrStripped, createTdMultiply, tdOMOverCross, tdOMOutCross, tdOClickCross) //current tableWorker
+const tdEventsCross = {
+    'mouseover' : tdOMOverCross,
+    'mouseout' : tdOMOutCross,
+    'click' : tdOClickCross,
+}
+
+tableWorkerCross = new TableWorker (createTrStripped, createTdMultiply, tdEventsCross) //current tableWorker
 
 drawTable.onclick = () => {
-    multiplyTable = fillTable (multiplyTable, multiplyMatrix.length, multiplyMatrix[0].length, {createTr, createTd, tdOMOver, tdOMOut, tdOClick} = tableWorkerCross) // fill table with current array and functions
+    multiplyTable = fillTable (multiplyTable, multiplyMatrix.length, multiplyMatrix[0].length, {createTr, createTd, tdEvents} = tableWorkerCross) // fill table with current array and functions
 }
 
 
