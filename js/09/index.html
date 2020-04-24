@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://necolas.github.io/normalize.css/8.0.1/normalize.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+    <title>Духнич Марина FEA18 JS HW 09</title>
+</head>
+<body>
+    <h1>ДЗ: Async: Callback & Promise</h1>
+    <section class = "mt-5" id = 'selectCountryAndCity'>
+        <h2>Select country and city</h2>
+        <button type="button" class="btn btn-primary mb-3" id = 'downloadCountriesAndCities'>Download the list of countries and cities</button>
+    </section>
+    <section class = "mt-5" id = 'swapi'>
+        <h2>Star wars links</h2>
+        <form>
+            <div class="form-row align-items-center">
+                <div class="col-auto">
+                    <button type="button" class="btn btn-primary mb-3" id = 'downloadLSInfo'>View info about Luke Skywalker</button>
+                </div>
+                <div class="col-auto">
+                    <label class="sr-only" for="timeForRace">Timeout, s</label>
+                    <div class="input-group mb-2">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Timeout, s</div>
+                        </div>
+                        <input type="number" min = '0.01' step = '0.01' class="form-control" id="timeForRace" value="1">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="raceCheck">
+                        <label class="form-check-label" for="raceCheck">
+                            I want to use the timeout
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+        <div class="result mt-4" id='swInfo'></div>
+    </section>
+
+
+    <script  src='js/main.js'></script>
+</body>
+</html>
