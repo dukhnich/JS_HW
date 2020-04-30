@@ -52,7 +52,7 @@ var saver = makeSaver(Math.random) //создает функцию-хранил�
 var finalCountdown = (num) => setTimeout(
     () => {
         console.log(num);
-        num > 1 ? sT (--num) : setTimeout(() => console.log("поехали!"), 1000)
+        num > 1 ? finalCountdown (--num) : setTimeout(() => console.log("поехали!"), 1000)
     }, 
 1000)
 finalCountdown (5)
