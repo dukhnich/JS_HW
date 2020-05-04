@@ -140,10 +140,11 @@ const getMessages = async function (place, user) {
                 messageId: nextMessageId
             })
             place.innerHTML = "";
+            nextMessageId = historyMsg.nextMessageId;
         }
         //console.log(user)
-        for (let item of historyMsg.data) {
-            place = createMsg ('div', place, [item.nick, item.message, item.timestamp, user], true)
+        for (let {nick, message, timestamp} of historyMsg.data) {
+            place.prepend(createMsg ('div', nick, message, timestamp, user))
         };
         return historyMsg.nextMessageId
     } catch (error) {
@@ -189,9 +190,7 @@ newMsg.oninput = () => {
     else {
         sendMsgBtn.disabled = true;
     }
-    if (newMsg.getAttribute('class').indexOf('is-invalid') > -1) {
-        newMsg.setAttribute('class', 'form-control')
-    }
+    newMsg = removeClassError (newMsg, 'is-invalid')
 }
 
 sendMsgBtn.onclick = async function () {
@@ -200,21 +199,25 @@ sendMsgBtn.onclick = async function () {
     //console.log(nextMessageId, num)
     if (num >= nextMessageId) {
         newMsg.value = '';
+        return;
     }
-    else {
-        newMsg.setAttribute('class', 'form-control is-invalid');
-    }
+    newMsg.setAttribute('class', newMsg.getAttribute('class') + ' is-invalid');
 }
 
 //check for short version of the histoty
 shortHistoryCheck.onclick = async function () {
+    if (numberForShortHistory.value < nextMessageId) {
+        numberForShortHistory = removeClassError (numberForShortHistory, 'is-invalid')
+    }
     if (shortHistoryCheck.checked) {
         numberForShortHistory.disabled = false;
         if (numberForShortHistory.value >= nextMessageId) {
-            numberForShortHistory.setAttribute('class', 'form-control is-invalid');
+            numberForShortHistory.setAttribute('class', numberForShortHistory.getAttribute('class') + ' is-invalid');
             return;
         }
+        //numberForShortHistory.disabled = true;
         await getMessages(historyWrapper, currentUser);
+        //numberForShortHistory.disabled = false;
         return;
     }
     numberForShortHistory.disabled = true;
@@ -224,70 +227,84 @@ shortHistoryCheck.onclick = async function () {
 }
 
 numberForShortHistory.oninput = async function () {
-    if (numberForShortHistory.getAttribute('class').indexOf('is-invalid') > -1) {
-        numberForShortHistory.setAttribute('class', 'form-control')
-    }
     if (numberForShortHistory.value >= nextMessageId) {
-        numberForShortHistory.setAttribute('class', 'form-control is-invalid');
+        numberForShortHistory.setAttribute('class', numberForShortHistory.getAttribute('class') + ' is-invalid');
         return;
     }
+    numberForShortHistory = removeClassError (numberForShortHistory, 'is-invalid')
+    //numberForShortHistory.disabled = true;
     await getMessages(historyWrapper, currentUser);
+    //numberForShortHistory.disabled = false;
 }
 
 //Stage 2
 
-function createElCreator(handler = function (el, parent, content = []) {return el}) { //abstract function for create an element, where handler is current function for content and attributes for the element
-    return function (elTag = "div", parent, content = [], prep = false) {
+function createElCreator(handler = function (el) {return el}) { //abstract function for create an element, where handler is current function for content and attributes for the element
+    return function (elTag = "div", ...content) {
         let el = document.createElement(elTag);
-        el = handler (el, parent, content);
-        if (prep) {
-            parent.prepend(el);
-            return parent
-        }
-        parent.appendChild(el);
-        return parent
+        el = handler (el, ...content);
+        return el
     }
 }
 
-const createElWithTextAndClass = createElCreator((el, parent, [text = "", cl = ""]) => {
-    el.innerText = text;
+const createElWithTextAndClass = createElCreator((el, text = "", cl = "") => {
+    el.innerHTML = text;
     el.setAttribute("class", cl);
     return el
 })
 
-const createTime = createElCreator((el, parent, [timestamp]) => {
+const createTime = createElCreator((el, timestamp) => {
     let time = new Date(timestamp);
-    let timeMsg = `${time.getHours()}:${time.getMinutes()}:${time.getSeconds()} ${time.getDate()}/${time.getMonth()}/${time.getFullYear()}`
-    el.setAttribute("datetime", `${time.getFullYear()}-${time.getMonth()}-${time.getDate()} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`);
-    el = createElWithTextAndClass ('small', el, [timeMsg]);
-    return el
-})
-
-const createMsgHeader = createElCreator((el, parent, [name = "", timestamp, user = ""]) => {
-    if (user === name) {
-        el.setAttribute("class", "card-header bg-warning text-white d-flex justify-content-between p-1");
+    let today = new Date;
+    let timeOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: "numeric", minute: "numeric", second: "numeric"};
+    let timeMsg = "";
+    if (time.getDate() === today.getDate()) {
+        timeMsg = time.toLocaleTimeString()
     }
-    else {el.setAttribute("class", "card-header bg-info text-white d-flex justify-content-between p-1");}
-    el = createElWithTextAndClass ('strong', el, [name, "mr-auto"]);
-    el = createTime ('time', el, [timestamp]);
+   else {
+        timeMsg = time.toLocaleDateString("ru", timeOptions)
+    }
+    el.setAttribute("datetime", time);//`${time.getFullYear()}-${time.getMonth() + 1}-${time.getDate()} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`);
+    el.appendChild(createElWithTextAndClass ('small', timeMsg));
     return el
 })
 
-const createMsgContent = createElCreator((el, parent, [text]) => {
+const createMsgHeader = createElCreator((el, name = "", timestamp, user = "") => {
+    let headerClass = "card-header bg-info text-white d-flex justify-content-between p-1"
+    if (user === name) {
+        el.setAttribute("class", headerClass + " bg-warning");
+    }
+    else {el.setAttribute("class", headerClass + " bg-info");}
+    el.appendChild(createElWithTextAndClass ('strong', name, "mr-auto"));
+    el.appendChild(createTime ('time', timestamp));
+    return el
+})
+
+const createMsgContent = createElCreator((el, text) => {
     el.setAttribute("class", "card-body p-1");
     el.setAttribute("style", "white-space: pre-wrap;");
-    el.innerText = text;
+    el.innerHTML = text;
     return el
 })
 
-const createMsg = createElCreator((el, parent, [name = "", text = "", timestamp, user = ""]) => {
+const createMsg = createElCreator((el, name = "", text = "", timestamp, user = "") => {
     if (user === name) {
         el.setAttribute("class", "card w-75 mb-3 ml-auto");
     }
     else {el.setAttribute("class", "card w-75 mb-3 ");}
-    el = createMsgHeader ('div', el, [name, timestamp, user]);
-    el = createMsgContent ('div', el, [text]);
+    el.appendChild(createMsgHeader ('div', name, timestamp, user));
+    el.appendChild(createMsgContent ('div', text));
     return el
 })
+
+const removeClassError = function(el, errorClass = "") {
+    let cl = el.getAttribute('class')
+    let errorClassIndex = cl.indexOf(errorClass);
+    if (errorClassIndex > -1) {
+        let newCl = cl.slice(0,errorClassIndex) + cl.slice(errorClassIndex + errorClass.length, cl.length)
+        numberForShortHistory.setAttribute('class', newCl)
+    }
+    return el
+}
 
 
