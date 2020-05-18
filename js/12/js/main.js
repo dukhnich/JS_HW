@@ -1,165 +1,28 @@
-//Form
-function Form(el, data = {}, okCallback, cancelCallback){
-    let me = this
-    let formBody = document.createElement('form')
-    let btnGroup = createElWithTextAndClass('div', "",'input-group' )
-    let okButton = createElWithTextAndClass('button', 'OK', "btn btn-success")
-    let cancelButton = createElWithTextAndClass('button', 'Cancel', "btn btn-danger ml-3")
-    cancelButton.setAttribute('type', 'button')
-    formBody.appendChild(createElWithTextAndClass('h2', 'Form creator'))
-
-    //Отображение
-    for (let [key, value] of Object.entries(data)) {
-        formBody.appendChild(createInputGroup('input-group', key, value, data, me));
-    };
-
-    formBody.appendChild(btnGroup);
-    if (typeof okCallback === 'function'){
-        let commentForBtn = createElWithTextAndClass('div', "Some data was not validated", "invisible alert alert-danger pt-2 pb-2 m-0 ml-3 order-3 input-group-text")
-        btnGroup.appendChild(commentForBtn);
-        btnGroup.appendChild(okButton);
-        okButton.onclick = (e) => {
-            //console.log(this)
-            //console.log(e)
-            let allValidatorsResult = true;
-            for (let [key, value] of Object.entries(data)) {
-                if ('function' === typeof this.validators[key]) {
-                    let id = "*" === key[0] ? `${(key.slice(1)).split(" ").join("")}Input` : `${key.split(" ").join("")}Input`;
-                    let input = document.getElementById(id)
-                    let res = this.validators[key](input.value, key, data, input)
-                    if (true !== res ) {
-                        allValidatorsResult = false;
-
-                    }
-                }
-            };
-            if (allValidatorsResult) {
-                commentForBtn = removeClass (commentForBtn, "visible");
-                commentForBtn = addClass (commentForBtn, "invisible");
-                this.okCallback(data)
-            }
-            else {
-                commentForBtn = removeClass (commentForBtn, "invisible");
-                commentForBtn = addClass (commentForBtn, "visible");
-            }
-            //console.log(e)
-            //e.stopPropagation();
-            e.preventDefault();
-
-            //return false;
-        }
-    }
-
-    if (typeof cancelCallback === 'function'){
-        btnGroup.appendChild(cancelButton);
-        cancelButton.onclick = (e) => {
-            this.cancelCallback(formStartData);
-        }
-    }
-
-    el.appendChild(formBody)
-
-    let formStartData = {};
-    Object.assign(formStartData, data);
-    this.formStartData = formStartData
-
-    this.okCallback     = okCallback
-    this.cancelCallback = cancelCallback
-
-    this.data           = data
-    this.validators     = {}
-}
-
-//Отображение
-function createElCreator(handler = function (el) {return el}) { //abstract function for create an element, where handler is current function for content and attributes for the element
-    return function (elTag = "div", ...content) {
+/**
+ * Abstract function for create an element, where handler is current function for content and attributes for the element
+ * @param handler{function(*, ...[*]): HTMLElement}
+ * @returns {function(*=, ...[*]): HTMLElement}
+ */
+function createElCreator(handler = function (el) {return el}) {
+    return function (elTag = "div", ...context) {
         let el = document.createElement(elTag);
-        el = handler (el, ...content);
+        el = handler (el, ...context);
         return el
     }
 }
 
-const createElWithTextAndClass = createElCreator((el, text = "", cl = "") => {
+const createElWithTextAndAttributes = createElCreator((el, text = "", attr = {}) => {
     el.innerHTML = text;
-    el.setAttribute("class", cl);
-    return el
-})
-
-const createInputGroup = createElCreator((el, key = "", value = "", syncObj = {}, thisOfForm) => {
-    //Mandatory
-    let id = "*" === key[0] ? key.slice(1) : key;
-    let fieldIsRequired = (id !== key);
-    let label = fieldIsRequired ? `<span class="text-danger font-weight-bold mr-1">*</span> ${id}` : id;
-
-    el.setAttribute("class", "input-group mb-3");
-    el.appendChild(createElWithTextAndClass('div', `<div class="input-group-text w-100 text-uppercase">${label}</div>`, "input-group-prepend w-25"))
-    let currentInput = inputCreators[typeOfInput(value)](key, id, value, syncObj, thisOfForm, fieldIsRequired);
-
-    //Validators messages
-    let comment = createElWithTextAndClass('div', `&#10003;`, "alert alert-success pt-2 pb-2 m-0 input-group-text")
-    if (fieldIsRequired && "" === currentInput.value) {
-        changeClassInputAndComment(currentInput, comment, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', "empty required field");
-    }
-    // if ('function' === typeof thisOfForm.validators[label]) {
-    //     let res = thisOfForm.validators[label](currentInput.value, label, syncObj, currentInput)
-    //     if (true !== res ) {
-    //         changeClassInputAndComment(currentInput, comment, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', res);
-    //     }
-    // }
-
-    el.appendChild(currentInput)
-    el.appendChild(comment)
-
-    return el
-})
-
-const createInput = createElCreator((el, id = "", value = "", type = "text", fieldIsRequired) => {
-    el.required = fieldIsRequired;
-    el.setAttribute("class", "form-control h-auto is-ok");
-    el.setAttribute("type", type);
-    el.setAttribute("id", id);
-    if ("checkbox" === type) {
-        el.setAttribute("checked", value);
-        return el
-    }
-    el.setAttribute("value", value);
-    return el
-})
-
-const dataOnInput = function (el, label = "", value = "", syncObj = {}, thisOfForm, type = "text", fieldIsRequired) {
-    el.oninput = () => {
-        let currentValue;
-        if ("checkbox" === type) {
-            currentValue = el.checked;
+    for (let [key, value] of Object.entries(attr)) {
+        if ("boolean" === typeof value) {
+            el[key] = value;
         }
         else {
-            currentValue = el.value;
+            el.setAttribute(key, value);
         }
-        //Validators
-        let key = "*" === label[0] ? label.slice(1) : label;
-        let comment = document.querySelector(`#${key.split(" ").join("")}Input + .alert`);
-        let validator = thisOfForm.validators[label]
-
-        if (fieldIsRequired && "" === currentValue) {
-            changeClassInputAndComment(el, comment, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', "empty required field");
-            return;
-        }
-        if ('function' === typeof validator) {
-            let res = validator(el.value, label, syncObj, el)
-            if (true !== res ) {
-                changeClassInputAndComment(el, comment, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', res);
-                return;
-            }
-        }
-
-        changeClassInputAndComment(el, comment, 'is-invalid', 'is-ok', 'alert-danger', 'alert-success', "&#10003;")
-
-        //Sync
-        syncObj[label] = currentValue;
-
     };
-}
-
+    return el
+})
 
 //Validators messages
 const removeClass = function(el, oldClass = "") {
@@ -180,106 +43,310 @@ const addClass = function(el, newClass = "") {
     }
     return el
 }
-
-const changeClassInputAndComment = function(input, comment, oldClassInput = "", newClassInput = "", oldClassComment = "", newClassComment = "", commentText = "") {
-    input = removeClass (input, oldClassInput);
-    input = addClass (input, newClassInput);
-    comment = removeClass (comment, oldClassComment);
-    comment = addClass (comment, newClassComment);
-    comment.innerHTML = commentText;
-}
-
-//Many Inputs
-let inputCreators = {
-    string(label = "", id = "", value = "", syncObj = {}, thisOfForm, fieldIsRequired){
-        let input = createInput('input', `${id.split(" ").join("")}Input`, value, "text", fieldIsRequired)
-        dataOnInput (input, label, value, syncObj, thisOfForm, "text", fieldIsRequired);
-        return input
-    },
-    password(label = "", id = "", value = "", syncObj = {}, thisOfForm, fieldIsRequired){
-        let input = createInput('input', `${id.split(" ").join("")}Input`, "", "text", fieldIsRequired)
-        dataOnInput (input, label, value, syncObj, thisOfForm, "text", fieldIsRequired);
-        return input
-    },
-    textarea(label = "", id = "", value = "", syncObj = {}, thisOfForm, fieldIsRequired){
-        let input = createElWithTextAndClass('textarea', value, "form-control");
-        input.required = fieldIsRequired;
-        input.setAttribute("id", `${id.split(" ").join("")}Input`);
-        dataOnInput (input, label, value, syncObj, thisOfForm, "", fieldIsRequired)
-        return input
-    },
-    number(label = "", id = "", value = "", syncObj = {}, thisOfForm, fieldIsRequired){
-        let input = createInput('input', `${id.split(" ").join("")}Input`, value, "number", fieldIsRequired)
-        dataOnInput (input, label, value, syncObj, thisOfForm, "number", fieldIsRequired)
-        return input
-    },
-    boolean(label = "", id = "", value = "", syncObj = {}, thisOfForm, fieldIsRequired){
-        let checkGroup = createElWithTextAndClass('div', "", "form-check ml-3 flex-grow-1")
-        let input = createInput('input', `${id.split(" ").join("")}Input`, value, "checkbox", fieldIsRequired)
-        input.setAttribute("class", "form-check-input position-static align-middle");
-        input.setAttribute("aria-label", `${label} Input`);
-        checkGroup.appendChild(input)
-        dataOnInput (input, label, value, syncObj, thisOfForm, "checkbox", fieldIsRequired)
-        return checkGroup
-    },
-    Date(label = "", id = "", value = "", syncObj = {}, thisOfForm, fieldIsRequired){
-        // let inputGroupDate = createElWithTextAndClass('div', "", "input-group date");
-        // inputGroupDate.setAttribute("id", `${id}Datetimepicker`); "2020-04-16T15:16" 1990-5-14T16:58
-        let ten = (num) => (num > 9 ? '' : "0") + num
-        let datetime = `${value.getFullYear()}-${ten(value.getMonth()+1)}-${ten(value.getDate())}T${ten(value.getHours())}:${ten(value.getMinutes())}`
-        let input = createInput('input', `${id.split(" ").join("")}Input`, datetime, "datetime-local", fieldIsRequired)
-        dataOnInput (input, label, datetime, syncObj, thisOfForm, "datetime-local", fieldIsRequired)
-        // inputGroupDate.appendChild(input);
-        // let span = createElWithTextAndClass('span', `<span class="glyphicon glyphicon-calendar"></span>`, "input-group-addon");
-        // inputGroupDate.appendChild(span);
-        // let script = createElWithTextAndClass ('script', `
-        // $(${id}Datetimepicker).datepicker({
-        //     locale: 'ru'
-        // });
-        // `)
-        // inputGroupDate.appendChild(script);
-        // (function () {
-        //     inputGroupDate.datetimepicker({
-        //         locale: 'ru'
-        //     });
-        // });
-        return input;
+function ClassHelper(element) {
+    this.getElement = function () {
+        return element;
+    }
+    this.removeClass = function (oldClass="") {
+        removeClass(element, oldClass);
+        return this;
+    }
+    this.addClass = function (newClass="") {
+        addClass(element, newClass);
+        return this;
     }
 }
+//Form
+function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
+    let me = this
+    let formBody = document.createElement('form')
+    let btnGroup = createElWithTextAndAttributes('div', "",{class: 'input-group'} )
+    let okButton = createElWithTextAndAttributes('button', 'OK', {class: "btn btn-success"})
+    let cancelButton = createElWithTextAndAttributes('button', 'Cancel', {class: "btn btn-danger ml-3", type: "button"})
+    formBody.appendChild(createElWithTextAndAttributes('h2', header))
 
-const typeOfInput = function(value){
-    if ("object" === typeof value){
-        let constr = value.constructor.name;
-        return constr;
+    const getInputNameByDataKey = function (key) { //some transformations for display keys for users
+        return ("*" === key[0] && " " === key[1]) ? "*" + key.slice(2) : key;
     }
-    if ("boolean" === typeof value){
-        return "boolean";
+    const getInputIDByDataKey = function (key) { //some transformations for prepare keys use like ID
+        return ("*" === key[0]) ? key.slice(1) : key;
     }
-    if ("string" === typeof value){
-        if ("" !== value) {
-            let passw = true;
-            for (let i = 0; i < value.length; i++) {
-                if (!(passw && "*" === value[i])) {
-                    passw = false;
+
+    const getInputValue = function (el) {
+        if ("input" === (el.tagName).toLowerCase() || "textarea" === (el.tagName).toLowerCase()) {
+            if ("checkbox" === el.getAttribute("type")) {
+            return el.checked;
+            }
+            return el.value;
+        }
+        return ""
+    }
+
+    const setInputValue = function (el, value) {
+        if ("input" === (el.tagName).toLowerCase() || "textarea" === (el.tagName).toLowerCase()) {
+            if ("checkbox" === el.getAttribute("type")) {
+                el.checked = value;
+            }
+            el.value = value;
+        }
+    }
+
+    const findCommentForInput = function (input) { //it works correctly if the comment is the last element in the group
+        let comment = null;
+        let el = input;
+        while (null === comment) {
+            if ("form" === el.tagName) {
+                return false
+            }
+            let wrapper = el.parentElement;
+            let lastElInWrapper = wrapper.children[wrapper.children.length - 1];
+            if (lastElInWrapper.getAttribute("class").indexOf("alert") > -1) {
+                comment = lastElInWrapper;
+            };
+            el = wrapper;
+        }
+        return comment;
+    }
+
+    let formStartData = {};
+
+    //Validators messages
+    const changeClassInputAndComment = function(input, comment, oldClassInput = "", newClassInput = "", oldClassComment = "", newClassComment = "", commentText = "") {
+        (new ClassHelper(input)).removeClass(oldClassInput).addClass(newClassInput);
+        (new ClassHelper(comment)).removeClass(oldClassComment).addClass(newClassComment);
+        comment.innerHTML = commentText;
+    }
+
+    this.validators     = {}
+    let innerValidators     = {}
+    //Password
+    const passwordValidator = function (pLength) {
+        return function (value) {
+            return value.length >= pLength ? true : `The password length must be more than ${pLength - 1} symbols`
+        }
+    }
+
+    const emptyRequiredField = function (value, key) {
+        return ((getInputIDByDataKey(key) !== key) && "" !== value) ? true : "empty required field"
+    }
+
+    function doInputValidators(handler = ()=>{}) { //abstract function for create an element, where handler is current function for content and attributes for the element
+        return function (el, value = "", key = "", data, ...context) {
+            if ('function' === typeof innerValidators[key]) {
+                let res = innerValidators[key](value, key, data, el)
+                if (true !== res ) {
+                    handler (res, el, value, key, data, ...context);
+                    return false;
                 }
             }
-            if (passw) {
-                return "password"
+            if ('function' === typeof me.validators[key]) {
+                let res = me.validators[key](value, key, data, el)
+                if (true !== res ) {
+                    handler (res, el, value, key, data, ...context);
+                    return false;
+                }
             }
+            return true;
         }
-        return value.length > 128 ? "textarea" : "string"
     }
-    if ("number" === typeof value){
-        return "number"
+
+    const inputValidateAndCreateErrorMsg = doInputValidators((res, el, value, key, data) =>{
+        let comment = findCommentForInput (el);
+        changeClassInputAndComment(el, comment, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', res);
+    })
+
+    const inputValidateAndChangeClass = function (input, key, data) {
+        let comment = findCommentForInput (input);
+        let validatorsRes = inputValidateAndCreateErrorMsg(input, getInputValue(input), key, data)
+        if (validatorsRes) {
+            changeClassInputAndComment(input, comment, 'is-invalid', 'is-ok', 'alert-danger', 'alert-success', "&#10003;");
+        }
+        return validatorsRes;
     }
+
+    //Отображение
+
+    const createInputGroup = createElCreator((el, key = "", value = "") => {
+        //Mandatory
+        el.setAttribute("class", "input-group mb-3");
+
+        let label ="";
+        if (getInputIDByDataKey(key) !== key) {
+            innerValidators[key] = (value, key, data, el) => emptyRequiredField(value, key);
+            label = `<span class="text-danger font-weight-bold mr-1">*</span> ${getInputNameByDataKey(key).slice(1)}`;
+        }
+        else {
+            label = getInputNameByDataKey(key);
+        }
+        el.appendChild(createElWithTextAndAttributes('div', `<div class="input-group-text w-100 text-uppercase">${label}</div>`, {class: "input-group-prepend w-25"}))
+
+        let currentInput = inputCreators[typeOfInput(value)](key, value);
+
+        //Validators messages
+        let comment = createElWithTextAndAttributes('div', ``, {class: "alert pt-2 pb-2 m-0 input-group-text"})
+        el.appendChild(currentInput)
+        el.appendChild(comment)
+        inputValidateAndChangeClass (currentInput, key, data, comment)
+        return el
+    })
+
+    const createInput = function(key = "", value = "", type = "text") {
+        let input = createElWithTextAndAttributes('input', "", {
+            class: "form-control h-auto is-ok",
+            type: type,
+            id: `${getInputIDByDataKey(key).split(" ").join("")}Input`,
+            required: getInputIDByDataKey(key) !== key
+        })
+        setInputValue (input, value);
+        formStartData[key] = getInputValue(input); //save start values for cancel button
+        return input
+    }
+
+    const dataOnInput = function (el, key = "", thisOfForm) {
+        el.oninput = () => {
+            //Validators
+            let validatorsRes = inputValidateAndChangeClass (el, key, thisOfForm.data)
+            //Sync
+            if (validatorsRes) {
+                thisOfForm.data[key] = getInputValue(el);
+            }
+        };
+    }
+
+//Many Inputs
+    let inputCreators = {
+        string(key = "", value = ""){
+            let input = createInput(key, value, "text")
+            dataOnInput (input, key, me);
+            return input
+        },
+        password(key = "", value = "", ){
+            let input = createInput(key, "", "text")
+            dataOnInput (input, key, me);
+            me.validators[key] = passwordValidator(value.length)
+            return input
+        },
+        textarea(key = "", value = ""){
+            let input = createElWithTextAndAttributes('textarea', value, {
+                class: "form-control",
+                id: `${getInputIDByDataKey(key).split(" ").join("")}Input`,
+                required: getInputIDByDataKey(key) !== key
+            });
+            dataOnInput (input, key, me);
+            formStartData[key] = getInputValue(input);
+            return input
+        },
+        number(key = "", value = ""){
+            let input = createInput(key, value, "number")
+            dataOnInput (input, key, me)
+            return input
+        },
+        boolean(key = "", value = ""){
+            let checkGroup = createElWithTextAndAttributes('div', "", {class: "form-check ml-3 flex-grow-1"})
+            let input = createInput(key, value, "checkbox")
+            input.setAttribute("class", "form-check-input position-static align-middle");
+            input.setAttribute("aria-label", `${key} Input`);
+            checkGroup.appendChild(input)
+            dataOnInput (input, key, me)
+            return checkGroup
+        },
+        Date(key = "", value = ""){
+            let ten = (num) => (num > 9 ? '' : "0") + num;
+            let datetime = `${value.getFullYear()}-${ten(value.getMonth()+1)}-${ten(value.getDate())}T${ten(value.getHours())}:${ten(value.getMinutes())}`;
+            let input = createInput(key, datetime, "datetime-local");
+            dataOnInput (input, key, me);
+            return input;
+        }
+    }
+
+    const typeOfInput = function(value){
+        if ("object" === typeof value){
+            let constr = value.constructor.name;
+            return constr;
+        }
+        if ("boolean" === typeof value){
+            return "boolean";
+        }
+        if ("string" === typeof value){
+            if ("" !== value) {
+                let passw = true;
+                for (let i = 0; i < value.length; i++) {
+                    if (!(passw && "*" === value[i])) {
+                        passw = false;
+                    }
+                }
+                if (passw) {
+                    return "password"
+                }
+            }
+            return value.length > 128 ? "textarea" : "string"
+        }
+        if ("number" === typeof value){
+            return "number"
+        }
+    }
+
+
+    //Отображение
+    for (let [key, value] of Object.entries(data)) {
+        formBody.appendChild(createInputGroup('input-group', key, value, me));
+    };
+
+    formBody.appendChild(btnGroup);
+
+    //OkButton
+    if (typeof okCallback === 'function'){
+        let commentForBtn = createElWithTextAndAttributes('div', "Some data was not validated", {class: "invisible alert alert-danger pt-2 pb-2 m-0 ml-3 order-3 input-group-text"})
+        btnGroup.appendChild(commentForBtn);
+        btnGroup.appendChild(okButton);
+        okButton.onclick = (e) => {
+            let allValidatorsResult = true;
+            for (let i=0; i<Object.keys(me.data).length && allValidatorsResult; i++) {
+                let key = Object.keys(me.data)[i]
+                let input = document.getElementById(`${getInputIDByDataKey(key).split(" ").join("")}Input`);
+                //Validators
+                allValidatorsResult = inputValidateAndChangeClass (input, key, me.data);
+            };
+
+            if (allValidatorsResult) {
+                commentForBtn = removeClass (commentForBtn, "visible");
+                commentForBtn = addClass (commentForBtn, "invisible");
+                this.okCallback(data)
+            }
+            else {
+                commentForBtn = removeClass (commentForBtn, "invisible");
+                commentForBtn = addClass (commentForBtn, "visible");
+            }
+            e.preventDefault();
+        }
+    }
+
+    //CancelButton
+    if (typeof cancelCallback === 'function'){
+        btnGroup.appendChild(cancelButton);
+        cancelButton.onclick = (e) => {
+            for (let key in formStartData) {
+                let input = document.getElementById(`${getInputIDByDataKey(key).split(" ").join("")}Input`);
+                setInputValue (input, formStartData[key])
+                //Validators
+                inputValidateAndChangeClass (input, key, formStartData)
+            };
+            this.cancelCallback(me.data);
+        }
+    }
+
+    el.appendChild(formBody)
+
+    this.okCallback     = okCallback
+    this.cancelCallback = cancelCallback
+
+    this.data           = data
 }
-
-
 
 
 let form = new Form(formContainer, {
     name: 'Anakin',
-    "surname": 'Skywalker',
+    "surname": 'Sk',
     married: true,
     "*long text": "jkschkajsh dijas hajksd hakjsd hlak haskljdhalkdhlak DHksjadh kj hljks Hlasjk hsjk HAJKA HjlAFH ljf hSKLJ FSHkjSF  DBJKSH DSFKJJV HFJKDjkh fejk ksfj",
     "number of legs": 2,
@@ -292,52 +359,9 @@ form.okCallback = function (data) {
     console.log(data)
 }
 
-form.cancelCallback = function (data) {
-    for (let [key, value] of Object.entries(data)) {
-        let id = "*" === key[0] ? `${(key.slice(1)).split(" ").join("")}` : `${key.split(" ").join("")}`;
-        let fieldIsRequired = (id === key) ? false : true;
-        let input = document.getElementById(`${id}Input`);
-        let currentValue, comment;
-        if ("checkbox" === input.getAttribute("type")) {
-            comment = input.parentElement.parentElement.children[2]
-            //comment = document.querySelector(`#${id}.parentElement + .alert`);
-            input.checked = value;
-            currentValue = input.checked;
-        } else {
-            comment = document.querySelector(`#${id}Input + .alert`);
-            input.value = value;
-            currentValue = input.value;
-        }
-        if (fieldIsRequired && "" === currentValue) {
-            changeClassInputAndComment(input, comment, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', "empty required field");
-            return;
-        }
-        if ('function' === typeof form.validators[key]) {
-            let res = form.validators[key](input.value, key, data, input);
-            if (true !== res) {
-                changeClassInputAndComment(input, comment, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', res);
-                return;
-            }
-        }
-        changeClassInputAndComment(input, comment, 'is-invalid', 'is-ok', 'alert-danger', 'alert-success', "&#10003;")
-    };
-}
-
 form.validators["surname"] = (value, key, data, input) => value.length > 2 &&
                                                         value[0].toUpperCase() == value[0] &&
                                                         !value.includes(' ') ? true : 'Wrong name'
-
-const passwordValidator = function (pLength) {
-    return function (currentLength) {
-        return currentLength >= pLength ? true : `The password length must be more than ${pLength - 1} symbols`
-    }
-}
-
-let mysteryLength = passwordValidator(form.data["*mystery"].length)
-
-form.validators["*mystery"] = function (value, key, data, input) {
-    return mysteryLength (value.length)
-}
 
 console.log(form)
 
