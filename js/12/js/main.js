@@ -1,6 +1,6 @@
 /**
  * Abstract function for create an element, where handler is current function for content and attributes for the element
- * @param handler{function(*, ...[*]): HTMLElement}
+ * @param handler{function(HTMLElement, ...[*]): HTMLElement}
  * @returns {function(*=, ...[*]): HTMLElement}
  */
 function createElCreator(handler = function (el) {return el}) {
@@ -11,6 +11,10 @@ function createElCreator(handler = function (el) {return el}) {
     }
 }
 
+/**
+ *
+ * @type {function(*=, ...[*]): HTMLElement}
+ */
 const createElWithTextAndAttributes = createElCreator((el, text = "", attr = {}) => {
     el.innerHTML = text;
     for (let [key, value] of Object.entries(attr)) {
@@ -24,25 +28,43 @@ const createElWithTextAndAttributes = createElCreator((el, text = "", attr = {})
     return el
 })
 
-//Validators messages
+/**
+ *
+ * @param el {HTMLElement}
+ * @param oldClass {string}
+ * @returns {HTMLElement}
+ */
 const removeClass = function(el, oldClass = "") {
     let cl = el.getAttribute('class')
     let classIndex = cl.indexOf(oldClass);
-    if (classIndex > -1) {
+    if (classIndex > -1 && oldClass.length > 0) {
         let newCl = cl.slice(0,classIndex) + cl.slice(classIndex + oldClass.length, cl.length)
         el.setAttribute('class', newCl)
     }
     return el
 }
 
+/**
+ *
+ * @param el {HTMLElement}
+ * @param newClass {string}
+ * @returns {HTMLElement}
+ */
 const addClass = function(el, newClass = "") {
     let cl = el.getAttribute('class')
     let classIndex = cl.indexOf(newClass);
-    if (-1 === classIndex) {
+    if (-1 === classIndex && newClass.length > 0) {
         el.setAttribute('class', el.getAttribute('class') + ' ' + newClass);
     }
     return el
 }
+
+/**
+ * The constructor for change a class of an element
+ * @param element {HTMLElement}
+ * @constructor
+ * @this {ClassHelper}
+ */
 function ClassHelper(element) {
     this.getElement = function () {
         return element;
@@ -57,6 +79,16 @@ function ClassHelper(element) {
     }
 }
 //Form
+/**
+ * The constructor that creates a form in the el
+ * @param el {HTMLElement}
+ * @param data {Object}
+ * @param okCallback {function({Object})}
+ * @param cancelCallback {function({Object})}
+ * @param header {string}
+ * @returns {HTMLElement}
+ * @constructor
+ */
 function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
     let me = this
     let formBody = document.createElement('form')
@@ -65,13 +97,29 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
     let cancelButton = createElWithTextAndAttributes('button', 'Cancel', {class: "btn btn-danger ml-3", type: "button"})
     formBody.appendChild(createElWithTextAndAttributes('h2', header))
 
-    const getInputNameByDataKey = function (key) { //some transformations for display keys for users
+    /**
+     * Some transformations for display keys for users
+     * @param key {string}
+     * @returns {string}
+     */
+    const getInputNameByDataKey = function (key) {
         return ("*" === key[0] && " " === key[1]) ? "*" + key.slice(2) : key;
     }
-    const getInputIDByDataKey = function (key) { //some transformations for prepare keys use like ID
+
+    /**
+     * Some transformations for prepare keys use like ID
+     * @param key {string}
+     * @returns {string}
+     */
+    const getInputIDByDataKey = function (key) {
         return ("*" === key[0]) ? key.slice(1) : key;
     }
 
+    /**
+     * Return boolean, if the el is checkbox or value of input/textarea
+     * @param el {HTMLElement}
+     * @returns {string|number|boolean}
+     */
     const getInputValue = function (el) {
         if ("input" === (el.tagName).toLowerCase() || "textarea" === (el.tagName).toLowerCase()) {
             if ("checkbox" === el.getAttribute("type")) {
@@ -82,6 +130,11 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
         return ""
     }
 
+    /**
+     * Set boolean, if the el is checkbox or value of input/textarea
+     * @param el {HTMLElement}
+     * @param value {string|number|boolean}
+     */
     const setInputValue = function (el, value) {
         if ("input" === (el.tagName).toLowerCase() || "textarea" === (el.tagName).toLowerCase()) {
             if ("checkbox" === el.getAttribute("type")) {
@@ -91,12 +144,17 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
         }
     }
 
-    const findCommentForInput = function (input) { //it works correctly if the comment is the last element in the group
+    /**
+     * It finds the closest element with class 'alert', it works correctly only if the comment is the last element in the group
+     * @param input {HTMLElement}
+     * @returns {null|HTMLElement}
+     */
+    const findCommentForInput = function (input) {
         let comment = null;
         let el = input;
         while (null === comment) {
             if ("form" === el.tagName) {
-                return false
+                return null
             }
             let wrapper = el.parentElement;
             let lastElInWrapper = wrapper.children[wrapper.children.length - 1];
@@ -108,41 +166,66 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
         return comment;
     }
 
+    /**
+     * This is the data for the cancel button
+     * @type {{}}
+     */
     let formStartData = {};
 
     //Validators messages
-    const changeClassInputAndComment = function(input, comment, oldClassInput = "", newClassInput = "", oldClassComment = "", newClassComment = "", commentText = "") {
-        (new ClassHelper(input)).removeClass(oldClassInput).addClass(newClassInput);
-        (new ClassHelper(comment)).removeClass(oldClassComment).addClass(newClassComment);
-        comment.innerHTML = commentText;
-    }
 
+    /**
+     * This is the public object for validators
+     * @type {{}}
+     */
     this.validators     = {}
+
+    /**
+     * This is the private object for validators
+     * @type {{}}
+     */
     let innerValidators     = {}
+
     //Password
+    /**
+     * The callback function for create validators for passwords
+     * @param pLength {number}
+     * @returns {function(*): boolean|string}
+     */
     const passwordValidator = function (pLength) {
         return function (value) {
             return value.length >= pLength ? true : `The password length must be more than ${pLength - 1} symbols`
         }
     }
 
+    /**
+     * Is the required field empty?
+     * @param value
+     * @param key {string}
+     * @returns {boolean|string}
+     */
     const emptyRequiredField = function (value, key) {
-        return ((getInputIDByDataKey(key) !== key) && "" !== value) ? true : "empty required field"
+        return ((getInputIDByDataKey(key) !== key) && "" !== value && null !== value && undefined !== value) ? true : "empty required field"
     }
 
-    function doInputValidators(handler = ()=>{}) { //abstract function for create an element, where handler is current function for content and attributes for the element
-        return function (el, value = "", key = "", data, ...context) {
+    /**
+     * Abstract function for getting a result of validate an element and run handler with this result
+     * @param handler {function(boolean|string, HTMLElement, *, string, {}, ...[*])}
+     * @returns {function(HTMLElement, *, string, {}, ...[*])}
+     */
+    function validate(handler = ()=>{}) {
+        return function (el, value, key = "", data, ...context) {
             if ('function' === typeof innerValidators[key]) {
-                let res = innerValidators[key](value, key, data, el)
-                if (true !== res ) {
-                    handler (res, el, value, key, data, ...context);
+                let result = innerValidators[key](value, key, data, el)
+                if (true !== result ) {
+                    handler (result, el, value, key, data, ...context);
                     return false;
                 }
             }
             if ('function' === typeof me.validators[key]) {
-                let res = me.validators[key](value, key, data, el)
-                if (true !== res ) {
-                    handler (res, el, value, key, data, ...context);
+                let result = me.validators[key](value, key, data, el)
+                if (true !== result ) {
+                    handler (result, el, value, key, data, ...context);
                     return false;
                 }
             }
@@ -150,22 +233,44 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
         }
     }
 
-    const inputValidateAndCreateErrorMsg = doInputValidators((res, el, value, key, data) =>{
-        let comment = findCommentForInput (el);
-        changeClassInputAndComment(el, comment, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', res);
-    })
+    /**
+     * @param input {HTMLElement}
+     * @param oldClassInput {string}
+     * @param newClassInput {string}
+     * @param oldClassComment {string}
+     * @param newClassComment {string}
+     * @param commentText {string}
+     */
+    const changeClassInputAndComment = function(input, oldClassInput = "", newClassInput = "", oldClassComment = "", newClassComment = "", commentText = "") {
+        let comment = findCommentForInput(input);
+        (new ClassHelper(input)).removeClass(oldClassInput).addClass(newClassInput);
+        (new ClassHelper(comment)).removeClass(oldClassComment).addClass(newClassComment);
+        comment.innerHTML = commentText;
+    }
 
+    /**
+     *
+     * @param input {HTMLElement}
+     * @param key {string}
+     * @param data {Object}
+     * @returns {boolean}
+     */
     const inputValidateAndChangeClass = function (input, key, data) {
-        let comment = findCommentForInput (input);
-        let validatorsRes = inputValidateAndCreateErrorMsg(input, getInputValue(input), key, data)
-        if (validatorsRes) {
-            changeClassInputAndComment(input, comment, 'is-invalid', 'is-ok', 'alert-danger', 'alert-success', "&#10003;");
+        let validatorsResult = (validate((result, input, value, key, data) =>{
+            changeClassInputAndComment(input, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', result);
+        }))(input, getInputValue(input), key, data)
+        if (validatorsResult) {
+            changeClassInputAndComment(input, 'is-invalid', 'is-ok', 'alert-danger', 'alert-success', "&#10003;");
         }
-        return validatorsRes;
+        return validatorsResult;
     }
 
     //Отображение
 
+    /**
+     * Create a label, an input and a comment for this input, run validate for it
+     * @type {function(*=, ...[*]): HTMLElement}
+     */
     const createInputGroup = createElCreator((el, key = "", value = "") => {
         //Mandatory
         el.setAttribute("class", "input-group mb-3");
@@ -186,11 +291,17 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
         let comment = createElWithTextAndAttributes('div', ``, {class: "alert pt-2 pb-2 m-0 input-group-text"})
         el.appendChild(currentInput)
         el.appendChild(comment)
-        inputValidateAndChangeClass (currentInput, key, data, comment)
+        inputValidateAndChangeClass (currentInput, key, data)
         return el
     })
 
-    const createInput = function(key = "", value = "", type = "text") {
+    /**
+     * @param key {string}
+     * @param value
+     * @param type {string}
+     * @returns {HTMLElement}
+     */
+    const createInput = function(key = "", value, type = "text") {
         let input = createElWithTextAndAttributes('input', "", {
             class: "form-control h-auto is-ok",
             type: type,
@@ -198,22 +309,33 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             required: getInputIDByDataKey(key) !== key
         })
         setInputValue (input, value);
-        formStartData[key] = getInputValue(input); //save start values for cancel button
+        //save start values for cancel button
+        formStartData[key] = getInputValue(input);
         return input
     }
 
+    /**
+     * Validate new value and, if ok, save it in data
+     * @param el {HTMLElement}
+     * @param key {string}
+     * @param thisOfForm {Object}
+     */
     const dataOnInput = function (el, key = "", thisOfForm) {
         el.oninput = () => {
             //Validators
-            let validatorsRes = inputValidateAndChangeClass (el, key, thisOfForm.data)
+            let validatorsResult = inputValidateAndChangeClass (el, key, thisOfForm.data)
             //Sync
-            if (validatorsRes) {
+            if (validatorsResult) {
                 thisOfForm.data[key] = getInputValue(el);
             }
         };
     }
 
 //Many Inputs
+    /**
+     *
+     * @type {{number(*=, *=): HTMLElement, password(*=, *=): HTMLElement, boolean(*=, *=): HTMLElement, string(*=, *=): HTMLElement, textarea(*=, *=): HTMLElement, Date(*=, *=): HTMLElement}}
+     */
     let inputCreators = {
         string(key = "", value = ""){
             let input = createInput(key, value, "text")
@@ -236,12 +358,12 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             formStartData[key] = getInputValue(input);
             return input
         },
-        number(key = "", value = ""){
+        number(key = "", value = 0){
             let input = createInput(key, value, "number")
             dataOnInput (input, key, me)
             return input
         },
-        boolean(key = "", value = ""){
+        boolean(key = "", value = true){
             let checkGroup = createElWithTextAndAttributes('div', "", {class: "form-check ml-3 flex-grow-1"})
             let input = createInput(key, value, "checkbox")
             input.setAttribute("class", "form-check-input position-static align-middle");
@@ -250,7 +372,7 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             dataOnInput (input, key, me)
             return checkGroup
         },
-        Date(key = "", value = ""){
+        Date(key = "", value = new  Date()){
             let ten = (num) => (num > 9 ? '' : "0") + num;
             let datetime = `${value.getFullYear()}-${ten(value.getMonth()+1)}-${ten(value.getDate())}T${ten(value.getHours())}:${ten(value.getMinutes())}`;
             let input = createInput(key, datetime, "datetime-local");
@@ -259,6 +381,11 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
         }
     }
 
+    /**
+     * What type of data in this input?
+     * @param value
+     * @returns {string}
+     */
     const typeOfInput = function(value){
         if ("object" === typeof value){
             let constr = value.constructor.name;
@@ -287,10 +414,10 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
     }
 
 
-    //Отображение
+    //Display
     for (let [key, value] of Object.entries(data)) {
         formBody.appendChild(createInputGroup('input-group', key, value, me));
-    };
+    }
 
     formBody.appendChild(btnGroup);
 
@@ -299,6 +426,7 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
         let commentForBtn = createElWithTextAndAttributes('div', "Some data was not validated", {class: "invisible alert alert-danger pt-2 pb-2 m-0 ml-3 order-3 input-group-text"})
         btnGroup.appendChild(commentForBtn);
         btnGroup.appendChild(okButton);
+
         okButton.onclick = (e) => {
             let allValidatorsResult = true;
             for (let i=0; i<Object.keys(me.data).length && allValidatorsResult; i++) {
@@ -309,13 +437,11 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             };
 
             if (allValidatorsResult) {
-                commentForBtn = removeClass (commentForBtn, "visible");
-                commentForBtn = addClass (commentForBtn, "invisible");
+                (new ClassHelper(commentForBtn)).removeClass("visible").addClass("invisible");
                 this.okCallback(data)
             }
             else {
-                commentForBtn = removeClass (commentForBtn, "invisible");
-                commentForBtn = addClass (commentForBtn, "visible");
+                (new ClassHelper(commentForBtn)).removeClass("invisible").addClass("visible");
             }
             e.preventDefault();
         }
@@ -324,6 +450,7 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
     //CancelButton
     if (typeof cancelCallback === 'function'){
         btnGroup.appendChild(cancelButton);
+
         cancelButton.onclick = (e) => {
             for (let key in formStartData) {
                 let input = document.getElementById(`${getInputIDByDataKey(key).split(" ").join("")}Input`);
@@ -337,12 +464,21 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
 
     el.appendChild(formBody)
 
+    /**
+     * @type {function({Object})}
+     */
     this.okCallback     = okCallback
+    /**
+     *
+     * @type {function({Object})}
+     */
     this.cancelCallback = cancelCallback
-
+    /**
+     *
+     * @type {Object}
+     */
     this.data           = data
 }
-
 
 let form = new Form(formContainer, {
     name: 'Anakin',
@@ -353,7 +489,8 @@ let form = new Form(formContainer, {
     "*mystery": "******",
     birthday: new Date((new Date).getTime() - 86400000 * 30*365)
 }, () => console.log('ok'),
-    () => console.log('cancel') )
+    () => console.log('cancel'),
+    "Test form")
 
 form.okCallback = function (data) {
     console.log(data)
