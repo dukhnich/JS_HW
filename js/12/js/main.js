@@ -79,6 +79,9 @@ function ClassHelper(element) {
     }
 }
 //Form
+
+let formsIdArray = []
+
 /**
  * The constructor that creates a form in the el
  * @param el {HTMLElement}
@@ -90,10 +93,33 @@ function ClassHelper(element) {
  * @constructor
  */
 function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
-    let me = this
-    let formBody = document.createElement('form')
+    let me = this;
+
+    //create form id
+    let formID = 0;
+    let isThisFormID = false;
+    if (0 === formsIdArray.length) {
+        isThisFormID = true;
+    }
+    while (!isThisFormID) {
+        isThisFormIDinArray = false;
+        for (let i in formsIdArray) {
+            if (formID === formsIdArray[i]) {
+                isThisFormIDinArray = true;
+            }
+        }
+        if (!isThisFormIDinArray) {
+            isThisFormID = true;
+        }
+        else {
+            formID = Math.round(Math.random()*1000);
+        }
+    }
+    formsIdArray.push(formID);
+
+    let formBody = createElWithTextAndAttributes('form', "",{class: 'mb-5', id: formID} )
     let btnGroup = createElWithTextAndAttributes('div', "",{class: 'input-group'} )
-    let okButton = createElWithTextAndAttributes('button', 'OK', {class: "btn btn-success"})
+    let okButton = createElWithTextAndAttributes('button', 'OK', {class: "btn btn-success", type: "button"})
     let cancelButton = createElWithTextAndAttributes('button', 'Cancel', {class: "btn btn-danger ml-3", type: "button"})
     formBody.appendChild(createElWithTextAndAttributes('h2', header))
 
@@ -175,16 +201,21 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
     //Validators messages
 
     /**
-     * This is the public object for validators
+     * This is the public object for validators, it includes arrays of validators for each field
      * @type {{}}
      */
     this.validators     = {}
 
     /**
-     * This is the private object for validators
+     * This is the private object for validators, it includes arrays of validators for each field
      * @type {{}}
      */
     let innerValidators     = {}
+
+    for (let key in data) {
+        this.validators[key] = [];
+        innerValidators[key] = [];
+    }
 
     //Password
     /**
@@ -194,6 +225,17 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
      */
     const passwordValidator = function (pLength) {
         return function (value) {
+            if ("" !== value) {
+                let asterix = true;
+                for (let i = 0; i < value.length; i++) {
+                    if (!(asterix && "*" === value[i])) {
+                        asterix = false;
+                    }
+                }
+                if (asterix) {
+                    return "The password must include some symbols besides asterixes"
+                }
+            }
             return value.length >= pLength ? true : `The password length must be more than ${pLength - 1} symbols`
         }
     }
@@ -205,32 +247,37 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
      * @returns {boolean|string}
      */
     const emptyRequiredField = function (value, key) {
-        return ((getInputIDByDataKey(key) !== key) && "" !== value && null !== value && undefined !== value) ? true : "empty required field"
+        return ((getInputIDByDataKey(key) !== key) && "" !== value && null !== value && undefined !== value) ? true : "Empty required field"
     }
 
+
     /**
-     * Abstract function for getting a result of validate an element and run handler with this result
-     * @param handler {function(boolean|string, HTMLElement, *, string, {}, ...[*])}
-     * @returns {function(HTMLElement, *, string, {}, ...[*])}
+     * Function that validates an element and returns an array with errors or an empty array, if all is ok
+     * @param value
+     * @param key {string}
+     * @param data {Object}
+     * @param el {HTMLElement}
+     * @returns {[]}
      */
-    function validate(handler = ()=>{}) {
-        return function (el, value, key = "", data, ...context) {
-            if ('function' === typeof innerValidators[key]) {
-                let result = innerValidators[key](value, key, data, el)
-                if (true !== result ) {
-                    handler (result, el, value, key, data, ...context);
-                    return false;
+    function validate(value, key = "", data, el) {
+        let errorsArray = [];
+        for (let validator of innerValidators[key]) {
+            if ('function' === typeof validator) {
+                let result = validator(value, key, data, el)
+                if (true !== result) {
+                    errorsArray.push(result)
                 }
             }
-            if ('function' === typeof me.validators[key]) {
-                let result = me.validators[key](value, key, data, el)
-                if (true !== result ) {
-                    handler (result, el, value, key, data, ...context);
-                    return false;
-                }
-            }
-            return true;
         }
+        for (let validator of me.validators[key]) {
+            if ('function' === typeof validator) {
+                let result = validator(value, key, data, el);
+                if (true !== result) {
+                    errorsArray.push(result)
+                }
+            }
+        }
+        return errorsArray;
     }
 
     /**
@@ -249,21 +296,25 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
     }
 
     /**
-     *
+     * Function that validate input value, change it class and print text of errors in comment div
      * @param input {HTMLElement}
      * @param key {string}
      * @param data {Object}
      * @returns {boolean}
      */
     const inputValidateAndChangeClass = function (input, key, data) {
-        let validatorsResult = (validate((result, input, value, key, data) =>{
-            changeClassInputAndComment(input, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', result);
-        }))(input, getInputValue(input), key, data)
-        if (validatorsResult) {
+        let validatorsResult = validate(getInputValue(input), key, data, input);
+        if (validatorsResult.length === 0) {
             changeClassInputAndComment(input, 'is-invalid', 'is-ok', 'alert-danger', 'alert-success', "&#10003;");
+            return true;
         }
-        return validatorsResult;
-    }
+        let errorMsg = ""
+        for (let error of validatorsResult) {
+            errorMsg += `<p class = 'm-0'>${error}</p>`
+        }
+        changeClassInputAndComment(input, 'is-ok', 'is-invalid', 'alert-success', 'alert-danger', errorMsg);
+        return false;
+    };
 
     //Отображение
 
@@ -277,18 +328,18 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
 
         let label ="";
         if (getInputIDByDataKey(key) !== key) {
-            innerValidators[key] = (value, key, data, el) => emptyRequiredField(value, key);
+            innerValidators[key].push((value, key, data, el) => emptyRequiredField(value, key));
             label = `<span class="text-danger font-weight-bold mr-1">*</span> ${getInputNameByDataKey(key).slice(1)}`;
         }
         else {
             label = getInputNameByDataKey(key);
         }
-        el.appendChild(createElWithTextAndAttributes('div', `<div class="input-group-text w-100 text-uppercase">${label}</div>`, {class: "input-group-prepend w-25"}))
+        el.appendChild(createElWithTextAndAttributes('div', `<div class="input-group-text w-100 text-uppercase text-wrap text-break text-left d-block ">${label}</div>`, {class: "input-group-prepend w-25"}))
 
         let currentInput = inputCreators[typeOfInput(value)](key, value);
 
         //Validators messages
-        let comment = createElWithTextAndAttributes('div', ``, {class: "alert pt-2 pb-2 m-0 input-group-text"})
+        let comment = createElWithTextAndAttributes('div', ``, {class: "alert pt-2 pb-2 m-0 input-group-text d-block text-left text-wrap text-break"})
         el.appendChild(currentInput)
         el.appendChild(comment)
         inputValidateAndChangeClass (currentInput, key, data)
@@ -303,9 +354,9 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
      */
     const createInput = function(key = "", value, type = "text") {
         let input = createElWithTextAndAttributes('input', "", {
-            class: "form-control h-auto is-ok",
+            class: "form-control h-auto w-25 flex-grow-1 flex-shrink-0",
             type: type,
-            id: `${getInputIDByDataKey(key).split(" ").join("")}Input`,
+            id: `${formID}Form${getInputIDByDataKey(key).split(" ").join("")}Input`,
             required: getInputIDByDataKey(key) !== key
         })
         setInputValue (input, value);
@@ -338,20 +389,20 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
      */
     let inputCreators = {
         string(key = "", value = ""){
-            let input = createInput(key, value, "text")
+            let input = createInput(key, value, "text");
             dataOnInput (input, key, me);
             return input
         },
         password(key = "", value = "", ){
-            let input = createInput(key, "", "text")
+            let input = createInput(key, "", "text");
             dataOnInput (input, key, me);
-            me.validators[key] = passwordValidator(value.length)
+            me.validators[key].push(passwordValidator(value.length));
             return input
         },
         textarea(key = "", value = ""){
             let input = createElWithTextAndAttributes('textarea', value, {
-                class: "form-control",
-                id: `${getInputIDByDataKey(key).split(" ").join("")}Input`,
+                class: "form-control w-50 flex-grow-1 flex-shrink-0",
+                id: `${formID}Form${getInputIDByDataKey(key).split(" ").join("")}Input`,
                 required: getInputIDByDataKey(key) !== key
             });
             dataOnInput (input, key, me);
@@ -429,9 +480,9 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
 
         okButton.onclick = (e) => {
             let allValidatorsResult = true;
-            for (let i=0; i<Object.keys(me.data).length && allValidatorsResult; i++) {
+            for (let i=0; i < Object.keys(me.data).length && allValidatorsResult; i++) {
                 let key = Object.keys(me.data)[i]
-                let input = document.getElementById(`${getInputIDByDataKey(key).split(" ").join("")}Input`);
+                let input = document.getElementById(`${formID}Form${getInputIDByDataKey(key).split(" ").join("")}Input`);
                 //Validators
                 allValidatorsResult = inputValidateAndChangeClass (input, key, me.data);
             };
@@ -453,7 +504,7 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
 
         cancelButton.onclick = (e) => {
             for (let key in formStartData) {
-                let input = document.getElementById(`${getInputIDByDataKey(key).split(" ").join("")}Input`);
+                let input = document.getElementById(`${formID}Form${getInputIDByDataKey(key).split(" ").join("")}Input`);
                 setInputValue (input, formStartData[key])
                 //Validators
                 inputValidateAndChangeClass (input, key, formStartData)
@@ -478,29 +529,126 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
      * @type {Object}
      */
     this.data           = data
+    this.container           = el;
 }
 
-let form = new Form(formContainer, {
+/**
+ * Create test form
+ * @type {HTMLElement}
+ */
+let form = new Form(testFormContainer, {
     name: 'Anakin',
     "surname": 'Sk',
     married: true,
     "*long text": "jkschkajsh dijas hajksd hakjsd hlak haskljdhalkdhlak DHksjadh kj hljks Hlasjk hsjk HAJKA HjlAFH ljf hSKLJ FSHkjSF  DBJKSH DSFKJJV HFJKDjkh fejk ksfj",
     "number of legs": 2,
-    "*mystery": "******",
+    "*mystery": "***",
     birthday: new Date((new Date).getTime() - 86400000 * 30*365)
 }, () => console.log('ok'),
     () => console.log('cancel'),
     "Test form")
 
+/**
+ * Change okCallback of the test form
+ * @param data
+ */
 form.okCallback = function (data) {
     console.log(data)
 }
 
-form.validators["surname"] = (value, key, data, input) => value.length > 2 &&
+/**
+ * Add a validator of surname to the test form
+ * @param value {string}
+ * @param key {string}
+ * @param data {Object}
+ * @param input {HTMLElement}
+ * @returns {boolean|string}
+ */
+form.validators["surname"].push((value, key, data, input) => value.length > 2 &&
                                                         value[0].toUpperCase() == value[0] &&
-                                                        !value.includes(' ') ? true : 'Wrong name'
+                                                        !value.includes(' ') ? true : 'Wrong name');
 
 console.log(form)
+
+//
+
+const passwordValidate = function (value, key, data, input) {
+    let lowerAlphabet = "abcdefghijklmnopqrstuvwxyzабвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+    let upperAlphabet = lowerAlphabet.toUpperCase();
+    let isUpperCaseinPassword = false;
+    let isLowerCaseinPassword = false;
+    let isNumberinPassword = false;
+    for (let i = 0; i < value.length; i++) {
+        if (!isUpperCaseinPassword && upperAlphabet.includes(value[i])) {
+            isUpperCaseinPassword = true;
+        }
+        if (!isLowerCaseinPassword && lowerAlphabet.includes(value[i])) {
+            isLowerCaseinPassword = true;
+        }
+        if (!isNumberinPassword && !isNaN(+value[i])) {
+            isNumberinPassword = true;
+        }
+    }
+    return  (isUpperCaseinPassword && isLowerCaseinPassword && isNumberinPassword) ? true : 'The password must include a number, a lowercase and an uppercase symbols'
+}
+
+/**
+ * Create a password form
+ * @type {HTMLElement}
+ */
+let passwordForm = new Form(passwordFormContainer, {
+        "*password": "******",
+    }, () => {
+        let changePasswordSection = document.getElementById('changePasswordSection')
+        if (null === changePasswordSection) {
+            changePasswordSection = createElWithTextAndAttributes('section', "", {id: 'changePasswordSection'});
+            passwordForm.container.appendChild(changePasswordSection);
+        }
+        else {
+            changePasswordSection.innerHTML = "";
+        }
+        /**
+         * Create a form for change the passwword
+         * @type {HTMLElement}
+         */
+        let changePasswordForm = new Form(changePasswordSection, {
+                "*current password": "******",
+                "*new password": "******"
+            }, (data) => {
+                let formID = (document.querySelector('#passwordFormContainer form').getAttribute('id'))
+                document.getElementById(formID + 'FormpasswordInput').value = data["*new password"];
+                passwordForm.data["*password"] = data["*new password"];
+            },
+            () => console.log('cancel'),
+            "Change password");
+        /**
+         * Add a validator: is the password the same that old password?
+         * @param value {string}
+         * @param key {string}
+         * @param data {Object}
+         * @param input {HTMLElement}
+         * @returns {boolean|string}
+         */
+        changePasswordForm.validators["*current password"].push((value, key, data, input) => value === passwordForm.data["*password"] ? true : 'This is not your current password')
+        /**
+         * Add a validator of the new password
+         * @param value {string}
+         * @param key {string}
+         * @param data {Object}
+         * @param input {HTMLElement}
+         * @returns {boolean|string}
+         */
+        changePasswordForm.validators["*new password"].push(passwordValidate)
+    },
+    () => {
+        let changePasswordSection = document.getElementById('changePasswordSection')
+        if (null !== changePasswordSection) {
+            changePasswordSection.innerHTML = "";
+        }
+    },
+    "Create password")
+
+passwordForm.validators["*password"].push(passwordValidate)
 
 
 // async function jsonPostFetch (url, data) {
