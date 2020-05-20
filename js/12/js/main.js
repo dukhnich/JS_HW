@@ -153,6 +153,18 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             }
             return el.value;
         }
+        if ("form" === (el.tagName).toLowerCase()) {
+            let arr = [];
+            for (let i in el.children) {
+                if ("input" === (el.tagName).toLowerCase() || "textarea" === (el.tagName).toLowerCase()) {
+                    if ("checkbox" === el.getAttribute("type")) {
+                        arr.push(el.checked);
+                    }
+                    else {arr.push(el.value)};
+                }
+            }
+            return arr;
+        }
         return ""
     }
 
@@ -356,9 +368,19 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
         let input = createElWithTextAndAttributes('input', "", {
             class: "form-control h-auto w-25 flex-grow-1 flex-shrink-0",
             type: type,
-            id: `${formID}Form${getInputIDByDataKey(key).split(" ").join("")}Input`,
+            id: `${formID}Form${getInputIDByDataKey(key).replace(/\W/g,'_')}Input`,
             required: getInputIDByDataKey(key) !== key
         })
+        if ("number" === type) {
+            let numbersAfterDot = 0;
+            if (value.toString().includes('.')) {
+                numbersAfterDot = (value.toString().split('.').pop().length)
+            };
+                // ((toString(value).includes(',')) ?
+                //     (toString(value).split(',').pop().length) :
+                //     0);
+            input.setAttribute('step', Math.pow(10, -1*numbersAfterDot))
+        }
         setInputValue (input, value);
         //save start values for cancel button
         formStartData[key] = getInputValue(input);
@@ -388,32 +410,62 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
      * @type {{number(*=, *=): HTMLElement, password(*=, *=): HTMLElement, boolean(*=, *=): HTMLElement, string(*=, *=): HTMLElement, textarea(*=, *=): HTMLElement, Date(*=, *=): HTMLElement}}
      */
     let inputCreators = {
+        /**
+         * stling < 128 symbols, not link, not password
+         * @param key {string}
+         * @param value {string}
+         * @returns {HTMLInputElement}
+         */
         string(key = "", value = ""){
             let input = createInput(key, value, "text");
             dataOnInput (input, key, me);
             return input
         },
+        /**
+         * string, consist of *
+         * @param key {string}
+         * @param value {string}
+         * @returns {HTMLInputElement}
+         */
         password(key = "", value = "", ){
             let input = createInput(key, "", "text");
             dataOnInput (input, key, me);
             me.validators[key].push(passwordValidator(value.length));
             return input
         },
+        /**
+         * long string
+         * @param key {string}
+         * @param value {string}
+         * @returns {HTMLTextAreaElement}
+         */
         textarea(key = "", value = ""){
             let input = createElWithTextAndAttributes('textarea', value, {
                 class: "form-control w-50 flex-grow-1 flex-shrink-0",
-                id: `${formID}Form${getInputIDByDataKey(key).split(" ").join("")}Input`,
+                id: `${formID}Form${getInputIDByDataKey(key).replace(/\W/g,'_')}Input`,
                 required: getInputIDByDataKey(key) !== key
             });
             dataOnInput (input, key, me);
             formStartData[key] = getInputValue(input);
             return input
         },
+        /**
+         * number
+         * @param key {string}
+         * @param value {number}
+         * @returns {HTMLInputElement}
+         */
         number(key = "", value = 0){
             let input = createInput(key, value, "number")
             dataOnInput (input, key, me)
             return input
         },
+        /**
+         * boolean, create checkbox
+         * @param key {string}
+         * @param value {boolean}
+         * @returns {HTMLDivElement}
+         */
         boolean(key = "", value = true){
             let checkGroup = createElWithTextAndAttributes('div', "", {class: "form-check ml-3 flex-grow-1"})
             let input = createInput(key, value, "checkbox")
@@ -423,12 +475,56 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             dataOnInput (input, key, me)
             return checkGroup
         },
+        /**
+         * date, returns input datatime
+         * @param key {number}
+         * @param value {Date}
+         * @returns {HTMLInputElement}
+         * @constructor
+         */
         Date(key = "", value = new  Date()){
             let ten = (num) => (num > 9 ? '' : "0") + num;
             let datetime = `${value.getFullYear()}-${ten(value.getMonth()+1)}-${ten(value.getDate())}T${ten(value.getHours())}:${ten(value.getMinutes())}`;
             let input = createInput(key, datetime, "datetime-local");
             dataOnInput (input, key, me);
             return input;
+        },
+        /**
+         * Array is converted to inputs without comments
+         * @param key {string}
+         * @param value {Array}
+         * @returns {HTMLDivElement}
+         * @constructor
+         */
+        Array(key = "", value = []){
+            let arrayInputGroup = createElWithTextAndAttributes('div', "", {class: "flex-grow-1 flex-shrink-0 w-50 h-100"})
+            for (let i in value) {
+                let input = inputCreators[typeOfInput(value[i])](i, value[i]);
+                dataOnInput (input, i, me);
+                arrayInputGroup.appendChild(input)
+            }
+            return arrayInputGroup
+        },
+        /**
+         * returns button, that creates new Form in this container on click in div-wrapper
+         * @param key {string}
+         * @param value {string}
+         * @returns {HTMLDivElement}
+         */
+        button(key = "", value = []){
+            let btnGroup = createElWithTextAndAttributes('div', "", {class: "flex-grow-1 flex-shrink-0 w-50 h-100"})
+            let ind = value.indexOf('/api/')
+            let name = value.slice(ind + 5).split("/").join(" ")
+            let btn = createElWithTextAndAttributes('form', `View info about ${name}`, {
+                id: `download${name.split(" ").join("")}Info`,
+                class: "btn btn-primary m-2",
+                type: "button"});
+            btn.onclick = () => {
+                me.container.innerHTML = "";
+                fetchAndParse(value, me.container)
+            }
+            btnGroup.appendChild(btn)
+            return btnGroup
         }
     }
 
@@ -446,10 +542,16 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             return "boolean";
         }
         if ("string" === typeof value){
+            if (-1 !== value.indexOf('/api/')) {
+                return "button"
+            }
+            if (!isNaN(+value)) {
+                return "number"
+            }
             if ("" !== value) {
                 let passw = true;
-                for (let i = 0; i < value.length; i++) {
-                    if (!(passw && "*" === value[i])) {
+                for (let i = 0; (passw && i < value.length); i++) {
+                    if ("*" !== value[i]) {
                         passw = false;
                     }
                 }
@@ -482,7 +584,7 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             let allValidatorsResult = true;
             for (let i=0; i < Object.keys(me.data).length && allValidatorsResult; i++) {
                 let key = Object.keys(me.data)[i]
-                let input = document.getElementById(`${formID}Form${getInputIDByDataKey(key).split(" ").join("")}Input`);
+                let input = document.getElementById(`${formID}Form${getInputIDByDataKey(key).replace(/\W/g,'_')}Input`);
                 //Validators
                 allValidatorsResult = inputValidateAndChangeClass (input, key, me.data);
             };
@@ -504,7 +606,7 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
 
         cancelButton.onclick = (e) => {
             for (let key in formStartData) {
-                let input = document.getElementById(`${formID}Form${getInputIDByDataKey(key).split(" ").join("")}Input`);
+                let input = document.getElementById(`${formID}Form${getInputIDByDataKey(key).replace(/\W/g,'_')}Input`);
                 setInputValue (input, formStartData[key])
                 //Validators
                 inputValidateAndChangeClass (input, key, formStartData)
@@ -570,8 +672,15 @@ form.validators["surname"].push((value, key, data, input) => value.length > 2 &&
 
 console.log(form)
 
-//
-
+// Change Password
+/**
+ * The function that check ia there in the password uppercase, lowercase and number
+ * @param value {string}
+ * @param key {string}
+ * @param data {Object}
+ * @param input {HTMLElement}
+ * @returns {boolean|string}
+ */
 const passwordValidate = function (value, key, data, input) {
     let lowerAlphabet = "abcdefghijklmnopqrstuvwxyzабвгдеёжзийклмнопрстуфхцчшщъыьэюя";
     let upperAlphabet = lowerAlphabet.toUpperCase();
@@ -632,11 +741,6 @@ let passwordForm = new Form(passwordFormContainer, {
         changePasswordForm.validators["*current password"].push((value, key, data, input) => value === passwordForm.data["*password"] ? true : 'This is not your current password')
         /**
          * Add a validator of the new password
-         * @param value {string}
-         * @param key {string}
-         * @param data {Object}
-         * @param input {HTMLElement}
-         * @returns {boolean|string}
          */
         changePasswordForm.validators["*new password"].push(passwordValidate)
     },
@@ -648,21 +752,36 @@ let passwordForm = new Form(passwordFormContainer, {
     },
     "Create password")
 
+/**
+ * Add a validator of the password
+ */
 passwordForm.validators["*password"].push(passwordValidate)
 
+//StarWars
+/**
+ * get data from url and create a form with it in el
+ * @param url {string}
+ * @param el {HTMLElement}
+ */
+const fetchAndParse = async function (url, el, header ) {
+    try {
+        const response = await fetch(url);
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new TypeError("Ой, мы не получили JSON!");
+        }
+        const json = await response.json();
+        let SWForm = new Form(el,
+            json,
+            () => console.log('ok'),
+            () => console.log('cancel'),
+            json.name || json.title)
+    } catch (error) {
+        console.log(error);
+    }
+}
+fetchAndParse('https://swapi.dev/api/people/1/', SWFormContainer)
 
-// async function jsonPostFetch (url, data) {
-//     let dataInit = {
-//         method: 'POST', //('addMessage' === data.func ? 'POST' : 'addMessage' === data.func ? 'GET' : '0')
-//         body: JSON.stringify(data)
-//     }
-//     const response = await fetch(url, dataInit)
-//     if (!response.ok) {
-//         throw new Error('status is not ok.');
-//     }
-//     let result =  await response.json()
-//     return result;
-// }
 //
 // let nextMessageId = 0;
 // let currentUser = nickName.value;
@@ -674,33 +793,7 @@ passwordForm.validators["*password"].push(passwordValidate)
 //     return obj.nextMessageId;
 // }
 //
-// const getMessages = async function (place, user) {
-//     try {
-//         //console.log(nextMessageId)
-//         let historyMsg = await jsonPostFetch("http://students.a-level.com.ua:10012", {
-//             func: "getMessages",
-//             messageId: nextMessageId
-//         })
-//         nextMessageId = historyMsg.nextMessageId; //Stage 3
-//         numberForShortHistory.setAttribute('max', String(nextMessageId))
-//         if (shortHistoryCheck.checked) {
-//             nextMessageId -= numberForShortHistory.value;
-//             historyMsg = await jsonPostFetch("http://students.a-level.com.ua:10012", {
-//                 func: "getMessages",
-//                 messageId: nextMessageId
-//             })
-//             place.innerHTML = "";
-//             nextMessageId = historyMsg.nextMessageId;
-//         }
-//         //console.log(user)
-//         for (let {nick, message, timestamp} of historyMsg.data) {
-//             place.prepend(createMsg ('div', nick, message, timestamp, user))
-//         };
-//         return historyMsg.nextMessageId
-//     } catch (error) {
-//         console.error('jsonPost failed: ', error);
-//     }
-// }
+
 //
 // async function sendAndCheck(place, nick, message) {
 //     let num = await sendMessage(nick, message);
