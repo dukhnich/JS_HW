@@ -376,9 +376,6 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             if (value.toString().includes('.')) {
                 numbersAfterDot = (value.toString().split('.').pop().length)
             };
-                // ((toString(value).includes(',')) ?
-                //     (toString(value).split(',').pop().length) :
-                //     0);
             input.setAttribute('step', Math.pow(10, -1*numbersAfterDot))
         }
         setInputValue (input, value);
@@ -411,7 +408,7 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
      */
     let inputCreators = {
         /**
-         * stling < 128 symbols, not link, not password
+         * string < 128 symbols, not link, not password
          * @param key {string}
          * @param value {string}
          * @returns {HTMLInputElement}
@@ -497,7 +494,9 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
          * @constructor
          */
         Array(key = "", value = []){
-            let arrayInputGroup = createElWithTextAndAttributes('div', "", {class: "flex-grow-1 flex-shrink-0 w-50 h-100"})
+            let arrayInputGroup = createElWithTextAndAttributes('div', "", {
+                class: "flex-grow-1 flex-shrink-0 w-50 h-100",
+                id: `${formID}Form${getInputIDByDataKey(key).replace(/\W/g,'_')}Input`})
             for (let i in value) {
                 let input = inputCreators[typeOfInput(value[i])](i, value[i]);
                 dataOnInput (input, i, me);
@@ -516,12 +515,12 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             let ind = value.indexOf('/api/')
             let name = value.slice(ind + 5).split("/").join(" ")
             let btn = createElWithTextAndAttributes('form', `View info about ${name}`, {
-                id: `download${name.split(" ").join("")}Info`,
+                id: `${formID}Form${getInputIDByDataKey(key).replace(/\W/g,'_')}Input`,
                 class: "btn btn-primary m-2",
                 type: "button"});
             btn.onclick = () => {
                 me.container.innerHTML = "";
-                fetchAndParse(value, me.container)
+                getSWInfo (value, me.container)
             }
             btnGroup.appendChild(btn)
             return btnGroup
@@ -582,9 +581,12 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
 
         okButton.onclick = (e) => {
             let allValidatorsResult = true;
-            for (let i=0; i < Object.keys(me.data).length && allValidatorsResult; i++) {
-                let key = Object.keys(me.data)[i]
+            for (let i=0; i < Object.keys(data).length && allValidatorsResult; i++) {
+                let key = Object.keys(data)[i];
                 let input = document.getElementById(`${formID}Form${getInputIDByDataKey(key).replace(/\W/g,'_')}Input`);
+                if ('button' === (input.tagName).toLowerCase()) {
+                    allValidatorsResult = true;
+                }
                 //Validators
                 allValidatorsResult = inputValidateAndChangeClass (input, key, me.data);
             };
@@ -596,7 +598,6 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
             else {
                 (new ClassHelper(commentForBtn)).removeClass("invisible").addClass("visible");
             }
-            e.preventDefault();
         }
     }
 
@@ -611,7 +612,7 @@ function Form(el, data = {}, okCallback, cancelCallback, header = "Form"){
                 //Validators
                 inputValidateAndChangeClass (input, key, formStartData)
             };
-            this.cancelCallback(me.data);
+            this.cancelCallback(data);
         }
     }
 
@@ -667,7 +668,7 @@ form.okCallback = function (data) {
  * @returns {boolean|string}
  */
 form.validators["surname"].push((value, key, data, input) => value.length > 2 &&
-                                                        value[0].toUpperCase() == value[0] &&
+                                                        value[0].toUpperCase() === value[0] &&
                                                         !value.includes(' ') ? true : 'Wrong name');
 
 console.log(form)
@@ -717,7 +718,7 @@ let passwordForm = new Form(passwordFormContainer, {
             changePasswordSection.innerHTML = "";
         }
         /**
-         * Create a form for change the passwword
+         * Create a form for change the password
          * @type {HTMLElement}
          */
         let changePasswordForm = new Form(changePasswordSection, {
@@ -759,175 +760,46 @@ passwordForm.validators["*password"].push(passwordValidate)
 
 //StarWars
 /**
- * get data from url and create a form with it in el
+ * Get data from url and parse it
  * @param url {string}
- * @param el {HTMLElement}
+ * @returns {Promise<any>}
  */
-const fetchAndParse = async function (url, el, header ) {
+const fetchAndParse = async function (url ) {
     try {
-        const response = await fetch(url);
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new TypeError("Ой, мы не получили JSON!");
-        }
-        const json = await response.json();
-        let SWForm = new Form(el,
-            json,
-            () => console.log('ok'),
-            () => console.log('cancel'),
-            json.name || json.title)
+            const response = await fetch(url);
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new TypeError("Ой, мы не получили JSON!");
+            }
+            return await response.json();
     } catch (error) {
         console.log(error);
     }
 }
-fetchAndParse('https://swapi.dev/api/people/1/', SWFormContainer)
 
-//
-// let nextMessageId = 0;
-// let currentUser = nickName.value;
-//
-// //Stage 5
-//
-// async function sendMessage(nick, message) {
-//     let obj = await jsonPostFetch("http://students.a-level.com.ua:10012", {func: 'addMessage', nick: nick, message: message})
-//     return obj.nextMessageId;
-// }
-//
+/**
+ * Cached Promise, creates form with data from local storage or fetches it and then creates
+ * @param url {string}
+ * @param el {HTMLElement}
+ * @returns {Promise<void>}
+ */
+const getSWInfo = async function (url, el) {
+    let data = {};
+    if (null !== localStorage.getItem(url)) {
+        data = JSON.parse(localStorage.getItem(url))
+    }
+    else {data = await fetchAndParse (url)};
+    let SWForm = new Form(el,
+        data,
+        /**
+         * Starwars localStorage
+         * @param data {Object}
+         */
+        (data) => {
+            localStorage.setItem(url, JSON.stringify(data));
+        },
+        () => console.log('cancel'),
+        data.name || data.title)
 
-//
-// async function sendAndCheck(place, nick, message) {
-//     let num = await sendMessage(nick, message);
-//     if (num > nextMessageId) {
-//         num = await getMessages(place, currentUser);
-//     }
-//     //console.log(nextMessageId, num)
-//     return num;
-// }
-//
-// //Stage 4
-//
-// const delay = ms => new Promise(ok => setTimeout(() => ok(ms), ms))
-//
-// async function checkLoop(place) {
-//     while (true) {
-//          getMessages(place, currentUser);
-//          await delay(20000)
-//         //console.log(nextMessageId)
-//     }
-// }
-//
-// checkLoop(historyWrapper)
-//
-// //Stage 1
-//
-// nickName.oninput = () => {
-//     currentUser = nickName.value;
-//     nextMessageId = 0;
-//     //console.log(currentUser)
-// }
-//
-// newMsg.oninput = () => {
-//     if (newMsg.value && nickName.value) {
-//         sendMsgBtn.disabled = false;
-//     }
-//     else {
-//         sendMsgBtn.disabled = true;
-//     }
-//     newMsg = removeClassError (newMsg, 'is-invalid')
-// }
-//
-// sendMsgBtn.onclick = async function () {
-//     sendMsgBtn.disabled = true;
-//     let num = await sendAndCheck(historyWrapper, nickName.value, newMsg.value)
-//     //console.log(nextMessageId, num)
-//     if (num >= nextMessageId) {
-//         newMsg.value = '';
-//         return;
-//     }
-//     newMsg.setAttribute('class', newMsg.getAttribute('class') + ' is-invalid');
-// }
-//
-// //check for short version of the histoty
-// shortHistoryCheck.onclick = async function () {
-//     if (numberForShortHistory.value < nextMessageId) {
-//         numberForShortHistory = removeClassError (numberForShortHistory, 'is-invalid')
-//     }
-//     if (shortHistoryCheck.checked) {
-//         numberForShortHistory.disabled = false;
-//         if (numberForShortHistory.value >= nextMessageId) {
-//             numberForShortHistory.setAttribute('class', numberForShortHistory.getAttribute('class') + ' is-invalid');
-//             return;
-//         }
-//         //numberForShortHistory.disabled = true;
-//         await getMessages(historyWrapper, currentUser);
-//         //numberForShortHistory.disabled = false;
-//         return;
-//     }
-//     numberForShortHistory.disabled = true;
-//     historyWrapper.innerHTML = "";
-//     nextMessageId = 0;
-//     await getMessages(historyWrapper, currentUser)
-// }
-//
-// numberForShortHistory.oninput = async function () {
-//     if (numberForShortHistory.value >= nextMessageId) {
-//         numberForShortHistory.setAttribute('class', numberForShortHistory.getAttribute('class') + ' is-invalid');
-//         return;
-//     }
-//     numberForShortHistory = removeClassError (numberForShortHistory, 'is-invalid')
-//     //numberForShortHistory.disabled = true;
-//     await getMessages(historyWrapper, currentUser);
-//     //numberForShortHistory.disabled = false;
-// }
-//
-// //Stage 2
-//
-//
-//
-// const createTime = createElCreator((el, timestamp) => {
-//     let time = new Date(timestamp);
-//     let today = new Date;
-//     let timeOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: "numeric", minute: "numeric", second: "numeric"};
-//     let timeMsg = "";
-//     if (time.getDate() === today.getDate()) {
-//         timeMsg = time.toLocaleTimeString()
-//     }
-//    else {
-//         timeMsg = time.toLocaleDateString("ru", timeOptions)
-//     }
-//     el.setAttribute("datetime", time);//`${time.getFullYear()}-${time.getMonth() + 1}-${time.getDate()} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`);
-//     el.appendChild(createElWithTextAndClass ('small', timeMsg));
-//     return el
-// })
-//
-// const createMsgHeader = createElCreator((el, name = "", timestamp, user = "") => {
-//     let headerClass = "card-header bg-info text-white d-flex justify-content-between p-1"
-//     if (user === name) {
-//         el.setAttribute("class", headerClass + " bg-warning");
-//     }
-//     else {el.setAttribute("class", headerClass + " bg-info");}
-//     el.appendChild(createElWithTextAndClass ('strong', name, "mr-auto"));
-//     el.appendChild(createTime ('time', timestamp));
-//     return el
-// })
-//
-// const createMsgContent = createElCreator((el, text) => {
-//     el.setAttribute("class", "card-body p-1");
-//     el.setAttribute("style", "white-space: pre-wrap;");
-//     el.innerHTML = text;
-//     return el
-// })
-//
-// const createMsg = createElCreator((el, name = "", text = "", timestamp, user = "") => {
-//     if (user === name) {
-//         el.setAttribute("class", "card w-75 mb-3 ml-auto");
-//     }
-//     else {el.setAttribute("class", "card w-75 mb-3 ");}
-//     el.appendChild(createMsgHeader ('div', name, timestamp, user));
-//     el.appendChild(createMsgContent ('div', text));
-//     return el
-// })
-
-
-
-
+}
+getSWInfo ('http://swapi.dev/api/people/1/', SWFormContainer)
