@@ -1,5 +1,117 @@
 #  Духнич Марина FEA19 JS HW 11  
-## makeProfileTimer
+## ООП: база.
+### Initialize
+```javascript
+const Person = function (name = "Ivan", surname = "Ivanov", age = 18, sex = "male", salary = 100, married = false){
+    this.name = name;
+    this.surname = surname;
+    this.age = age;
+    this.sex = sex;
+    this.salary = salary;
+    this.married = married;
+};
+console.log (new Person("Vasiliy"))
+```
+### Closure getters and setters
+```javascript
+const Person = function (name = "Ivan", surname = "Ivanov", age = 18, sex = "male", salary = 100, married = false){
+    let father = null;
+    let children = [];
+    this.getName = function(){
+        return name;
+    };
+    this.setName = function(newName){
+        if (("string" === typeof  newName) && (newName.length > 1) && (newName[0].toUpperCase() === newName[0])) {
+            name = newName;
+        }
+        return name;
+    };
+    this.getSurname = function(){
+            return surname;
+    };
+    this.setSurname = function(newSurname){
+        if (("string" === typeof  newSurname) && (newSurname.length > 1) && (newSurname[0].toUpperCase() === newSurname[0])) {
+            surname = newSurname;
+        }
+        return surname;
+    };
+    this.getAge = function(){
+            return age;
+    };
+    this.setAge = function(newAge){
+        if ((Number.isInteger(newAge) || ("string" === typeof  newAge)) && (-1 < newAge) && (200 > newAge)) {
+            age = +newAge;
+        }
+        return age;
+    };
+    this.getSex = function(){
+            return sex;
+    };
+    this.setSex = function(newSex){
+        if (("string" === typeof  newSex) && (("male" === newSex.toLowerCase()) || ("female" === newSex.toLowerCase()))) {
+            sex = newSex.toLowerCase();
+        }
+        return sex;
+    };
+    this.getSalary = function(){
+            return salary;
+    };
+    this.setSalary = function(newSalary){
+        if ((Number.isInteger(newSalary) || ("string" === typeof  newSalary)) && (-1 < newSalary)) {
+            salary = +newSalary;
+        }
+        return salary;
+    };
+    this.getMarried = function(){
+        return married;
+    };
+    this.setMarried = function(newMarried){
+        if (("boolean" === typeof  newMarried)) {
+            married = newMarried;
+        }
+        return married;
+    };
+    this.setFather = function(newFather){
+        if (Person === newFather.constructor) {
+            father = newFather;
+        }
+        return father;
+    };
+    this.getFatherName = function(){
+    if (null !== father) {
+        if ("male" === sex) {
+            return father.getName() + 'ovich'
+        };
+        if ("female" === sex) {
+            return father.getName() + 'ovna'
+        };
+    }
+        return "The fathername is unknown";
+    };
+    this.addChild = function(newChild){
+        if ((Person === newChild.constructor) && ((age - newChild.getAge()) > 14)) {
+            children.push(newChild);
+            newChild.setFather(this);
+        }
+        return children.length;
+    };
+};
+var father   = new Person("Ivan", "Petrov", 50, "male", 100500, true)
+var daughter = new Person("Maria", "Petrova", 25, "female", 500, false)
+
+
+var father2  = new Person("iPhone", "Sedmoy", 45, "male", 500, true)
+var son      = new Person("Ivan", "Sedmoy", 20, "male", 200, false)
+
+father.addChild(daughter)
+console.log(daughter.getFatherName()) // => "Ivanovna"
+
+son.setFather(father2)
+console.log(son.getFatherName())
+```
+
+## Замыкания
+### makeProfileTimer
 ```javascript
 function makeProfileTimer () {
     var timerStart = performance.now();
@@ -23,7 +135,7 @@ doSomething('https://swapi.dev/api/people/1/');  //некий код, время
 alert("Call to doSomething took " + timer () + " milliseconds.");
 ```
 
-## makeSaver
+### makeSaver
 ```javascript
 function makeSaver (func) {
     let res =  func();
@@ -47,7 +159,7 @@ var saver = makeSaver(Math.random) //создает функцию-хранил�
 
 ```
 
-## Final Countdown
+### Final Countdown
 ```javascript
 var finalCountdown = (num) => setTimeout(
     () => {
@@ -58,7 +170,7 @@ var finalCountdown = (num) => setTimeout(
 finalCountdown (5)
 ```
 
-## Self-Invoked Final Countdown 
+### Self-Invoked Final Countdown 
 ```javascript
 (function(num){
     setTimeout(
@@ -71,7 +183,7 @@ finalCountdown (5)
 
 ```
 
-## myBind
+### myBind
 ```javascript
 function myBind(func, currentThis, context) {
   return function() {
