@@ -72,7 +72,8 @@ const Person = function (name = "Ivan", surname = "Ivanov", age = 18, sex = "mal
         return married;
     };
     this.setFather = function(newFather){
-        if (Person === newFather.constructor) {
+        if (Person === newFather.constructor && father !== newFather) {
+            newFather.addChild(this)
             father = newFather;
         }
         return father;
@@ -89,7 +90,7 @@ const Person = function (name = "Ivan", surname = "Ivanov", age = 18, sex = "mal
         return "The fathername is unknown";
     };
     this.addChild = function(newChild){
-        if ((Person === newChild.constructor) && ((age - newChild.getAge()) > 14)) {
+        if ((Person === newChild.constructor) && ((age - newChild.getAge()) > 14) && !(children.includes(newChild))) {
             children.push(newChild);
             newChild.setFather(this);
         }
