@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://necolas.github.io/normalize.css/8.0.1/normalize.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <title>Духнич Марина FEA19 JS HW Promises part 2</title>
+</head>
+<body>
+    <h1 class = "mb-5">Github repositories</h1>
+    <form class="form-inline">
+        <div class="form-group mx-sm-3 mb-2">
+            <label for="inputSearch" class="sr-only">Search</label>
+            <input type="text" class="form-control" id="inputSearch" placeholder="Search">
+        </div>
+        <button type="button" class="btn btn-primary mb-2" id="inputSearchBtn">Search repositories</button>
+        <div class="col-auto my-1 ml-auto">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="isOrderCheckbox">
+                <label class="form-check-label" for="isOrderCheckbox">
+                    Order info
+                </label>
+            </div>
+        </div>
+        <div class="col-auto my-1">
+            <div class="form-group" >
+                <label for="orderCategories">Chose category</label>
+                <select class="form-control ml-3" id="orderCategories" disabled>
+                    <option value = "best match">Best match</option>
+                    <option value = "stars">Number of stars</option>
+                    <option value = "forks">Number of forks</option>
+                    <option value = "help-wanted-issues">Number of help wanted issues</option>
+                    <option value = "updated">How recently the items were updated</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-auto my-1">
+            <div class="form-group">
+                <div class="form-check form-check-inline" >
+                    <input class="form-check-input" type="radio" name="orderAscDesc" id="orderAsc" value="asc" disabled checked>
+                    <label class="form-check-label mr-3" for="orderAsc">A-Z</label>
+                    <input class="form-check-input" type="radio" name="orderAscDesc" id="orderDesc" value="desc" disabled>
+                    <label class="form-check-label" for="orderDesc">Z-A</label>
+                </div>
+            </div>
+        </div>
+    </form>
+    <section id = 'repositoriesList'>
+    </section>
+    <script  src='js/main.js'></script>
+</body>
+</html>
