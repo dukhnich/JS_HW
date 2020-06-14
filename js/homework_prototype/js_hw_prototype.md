@@ -20,6 +20,8 @@ Number.prototype.plus = function (num) {
  * @returns {string}
  */
 String.prototype.reverse = function () {
+    //    return str.split("").reverse().join("");
+    //    return '\u202E' + str
     let reverseString = "";
     for (let i = this.length - 1; i >= 0; i--) {
         reverseString += this[i];
