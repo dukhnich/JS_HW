@@ -1,0 +1,203 @@
+{
+  "lastUpdate": {
+    "date": "19.06.2020, 21:11:57"
+  },
+  "users": [
+    {
+      "id": "jvantuyl",
+      "active": true
+    },
+    {
+      "id": "BrianTheCoder",
+      "active": true
+    },
+    {
+      "id": "freeformz",
+      "active": true
+    },
+    {
+      "id": "hassox",
+      "active": true
+    },
+    {
+      "id": "automatthew",
+      "active": true
+    },
+    {
+      "id": "mojombo",
+      "active": false
+    },
+    {
+      "id": "defunkt",
+      "active": false
+    },
+    {
+      "id": "queso",
+      "active": false
+    },
+    {
+      "id": "lancecarlson",
+      "active": false
+    },
+    {
+      "id": "lukesutton",
+      "active": false
+    },
+    {
+      "id": "garevna",
+      "active": false
+    }
+  ],
+  "messages": [
+    {
+      "id": 1,
+      "date": "05.02.2019, 10:18:32",
+      "user": "mojombo",
+      "body": "Hello everybody here! What do you prefer: static or dynamic import?"
+    },
+    {
+      "id": 2,
+      "date": "05.02.2019, 10:19:11",
+      "user": "hassox",
+      "body": "The static import syntax can only be used at the top-level of the file"
+    },
+    {
+      "id": 3,
+      "user": "BrianTheCoder",
+      "date": "05.02.2019, 10:22:15",
+      "body": "Dynamic import() introduces a new function-like form of import that caters to those use cases"
+    },
+    {
+      "id": 4,
+      "date": "05.02.2019, 11:10:18",
+      "user": "defunkt",
+      "body": "Since import() returns a promise, it's possible to use async/await instead of the then-based callback style"
+    },
+    {
+      "id": 5,
+      "date": "07.02.2019, 18:34:12",
+      "user": "queso",
+      "body": "Although import() looks like a function call, it is specified as syntax that just happens to use parentheses"
+    },
+    {
+      "id": 6,
+      "date": "07.02.2019, 18:38:05",
+      "user": "lancecarlson",
+      "body": "The lazy-loading capabilities enabled by dynamic import() can be quite powerful when applied correctly"
+    },
+    {
+      "id": 7,
+      "date": "13.03.2019, 10:21:20",
+      "user": "lukesutton",
+      "body": "Static import and dynamic import() are both useful"
+    },
+    {
+      "id": 8,
+      "date": "13.03.2019, 11:14:33",
+      "user": "garevna",
+      "body": "ws-json-server adds a little abstraction to websocket"
+    },
+    {
+      "user": "jvantuyl",
+      "date": "19.06.2020, 20:43:13",
+      "body": "1. Что делает функция mutateUser ?",
+      "id": 9
+    },
+    {
+      "user": "freeformz",
+      "date": "19.06.2020, 20:47:05",
+      "body": "возвращает объект, ключи в котором - id юзеров, а значения - результат коллбека с параметром-исходным юзером",
+      "id": 10
+    },
+    {
+      "user": "hassox",
+      "date": "19.06.2020, 20:47:21",
+      "body": "2. Что возвращает метод createUserAvatar ?",
+      "id": 11
+    },
+    {
+      "user": "freeformz",
+      "date": "19.06.2020, 20:47:47",
+      "body": "промис",
+      "id": 12
+    },
+    {
+      "user": "hassox",
+      "date": "19.06.2020, 20:48:13",
+      "body": "3. Что происходит при вводе сообщения ?",
+      "id": 13
+    },
+    {
+      "user": "freeformz",
+      "date": "19.06.2020, 20:51:30",
+      "body": "Данные о сообщении отправляются в мессаджи, обновляется дата последнего обновления, очищается инпут",
+      "id": 14
+    },
+    {
+      "user": "hassox",
+      "date": "19.06.2020, 20:52:12",
+      "body": "4. Можно ли создать в одной вкладке более одного экземпляра класса SimpleChat ?",
+      "id": 15
+    },
+    {
+      "user": "freeformz",
+      "date": "19.06.2020, 20:52:48",
+      "body": "нет, в консоль выводится предупреждение, что может быть только один экземпляр",
+      "id": 16
+    },
+    {
+      "user": "hassox",
+      "date": "19.06.2020, 20:53:13",
+      "body": "5. Откуда берутся аватарки пользователей чата ?",
+      "id": 17
+    },
+    {
+      "user": "freeformz",
+      "date": "19.06.2020, 20:54:38",
+      "body": "из  `https://api.github.com/users/${user.id}`, то есть по тем же номерам юзеров из гитхаба",
+      "id": 18
+    },
+    {
+      "user": "hassox",
+      "date": "19.06.2020, 20:56:11",
+      "body": "6. Совпадает ли структура данных о юзерах чата на клиенте со структорой данных в базе на сервере ?",
+      "id": 19
+    },
+    {
+      "user": "freeformz",
+      "date": "19.06.2020, 20:58:40",
+      "body": "нет, добавляются аватары",
+      "id": 20
+    },
+    {
+      "user": "hassox",
+      "date": "19.06.2020, 20:59:42",
+      "body": "7. Как определяется логин нового пользователя чата при подключении ?",
+      "id": 21
+    },
+    {
+      "user": "freeformz",
+      "date": "19.06.2020, 21:06:46",
+      "body": "берется первый неактивный юзер из списка",
+      "id": 22
+    },
+    {
+      "user": "hassox",
+      "date": "19.06.2020, 21:07:41",
+      "body": "8. Что делает метод closeChat и когда он вызывается ?",
+      "id": 23
+    },
+    {
+      "user": "freeformz",
+      "date": "19.06.2020, 21:09:32",
+      "body": "меняет статус юзера на неактивный, отсылает обновленную информацию о юзере в базу, срабатывает ",
+      "id": 24
+    },
+    {
+      "user": "freeformz",
+      "date": "19.06.2020, 21:11:57",
+      "body": "onunload - перед закрытием вкладки",
+      "id": 25
+    }
+  ]
+}
