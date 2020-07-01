@@ -11,23 +11,38 @@
     <title>Духнич Марина FEA19 JS HW Functions</title>
 </head>
 <body>
-    <h1>HW Functions</h1>
-    <div class="input-group">
-        <div class = "mr-5" id = "countdownMS">
-            <h2 class = "mb-4">Countdown ms</h2>
-            <div class="input-group">
-            <label class = "mr-3 mb-0">Time, s
+    <h1>Countdowns</h1>
+    <div class = "input-group mb-5">
+        <div class="input-group">
+            <label class = "mr-3">The name of countdown
+                <input type="text" class="form-control" id="nameCount" value = "Countdown 0">
+            </label>
+            <label class = "mr-3">Start time, s
                 <input type="number" min = 0.1 step = 0.1 class="form-control" id="timeCount" value = 5>
             </label>
-            <label class = "mr-3 mb-0">Interval, s
+            <label class = "mr-3">Start interval, s
                 <input type="number" min = 0.1 step = 0.1 class="form-control" id="interval" value = 1>
+            </label>
+        </div>
+        <button type="button" id = "createCountdown" class="btn btn-primary btn-lg mr-3">Create countdown</button>
+        <button type="button" class="btn btn-warning btn-lg mr-3 " id = "stopAll">Stop all</button>
+        <button type="button" class="btn btn-danger btn-lg" id = "removeAll">Remove all</button>
+    </div>
+    <div class="input-group" id = "countdownsContainer">
+        <!--
+        <div class = "mr-5" id = "countdownMS">
+            <h2 class = "mb-4">Countdown ms</h2>
+            <div class="input-group mb-4">
+            <label class = "mr-3 mb-0">Time, s
+                <input type="number" min = 0.1 step = 0.1 class="form-control" id="timeCount0" value = 5>
+            </label>
+            <label class = "mr-3 mb-0">Interval, s
+                <input type="number" min = 0.1 step = 0.1 class="form-control" id="interval0" value = 1>
             </label>
             </div>
             <button type="button" id = "start" class="btn btn-success mt-4">Start</button>
             <button type="button" id = "stopCount" class="btn btn-danger mt-4">Stop</button>
             <button type="button" id = "restart" class="btn btn-warning mt-4">Restart</button>
-
-            <div id = "filesNames"></div>
         </div>
         <div class = "mr-5">
             <h2 class = "mb-4">Countdown s</h2>
@@ -42,10 +57,7 @@
             <button type="button" id = "start1" class="btn btn-success mt-4">Start</button>
             <button type="button" id = "stopCount1" class="btn btn-danger mt-4">Stop</button>
             <button type="button" id = "restart1" class="btn btn-warning mt-4">Restart</button>
-
-            <div id = "filesNames"></div>
-        </div>
-        <button type="button" class="btn btn-danger btn-lg" id = "stopAll">Stop all</button>
+        </div> -->
 
     </div>
 
