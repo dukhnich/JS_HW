@@ -1,53 +1,68 @@
-eventDone = new CustomEvent("done", {bubbles: true});
 document.addEventListener("start", function(event) { // (1)
-    alert("Привет от " + event.target.tagName); // Привет от H1
+    console.log( "Timer started:  " + Object.values(event.detail)); // Привет от H1
 })
 document.addEventListener("done", function(event) { // (1)
-    alert("Пока от " + event.target.tagName); // Привет от H1
-})
+    console.log( "Timer done: " + Object.values(event.detail)); // Привет от H1
+});
 
-function Countdown(callback, time = 5000, interval = 1000){
-    Countdown.count++;
+function Countdown(callback, time = 5000, interval = 1000, name = "Some Countdown"){
     Countdown.instances.add(this);
-    let timeoutId = [];
-    function startCount(ms) {
-
-        return function () {
-            let eventStart = new CustomEvent("start", {bubbles: true});
-            document.dispatchEvent(eventStart);
-
-            timeoutId.push(setTimeout(
+    let timeoutId = null;
+    let currentTime = time;
+    let startTime = time;
+    let currentInterval = interval;
+    let res = true;
+    function timeTick () {
+        return new Promise(resolve => {
+            timeoutId = setTimeout(
                 () => {
-                    let res = callback(ms);
-                    if (false !== res && ms > 0) {
-                        ms -= interval;
-                        this.start(ms);
-                        return
-                    }
+                    resolve (callback(currentTime));
                 },
-                interval));
-        }
+                currentInterval);
+        })
     }
-    function restartCount() {
-        return function () {
-            this.stop();
-            this.start = startCount(time);
-            this.start();
+    async function startCount() {
+        if (false !== res && currentTime >= 0) {
+            res = await timeTick ();
+            currentTime -= currentInterval;
+            startCount();
+            return
         }
-    }
-    this.start = startCount(time);
+        let doneEvent = new CustomEvent("done", {bubbles: true, detail: {name, startTime, currentInterval}});
+        document.dispatchEvent(doneEvent);
+     }
+
+
+    this.start = function () {
+        if (startTime === currentTime) {
+            let startEvent = new CustomEvent("start", {bubbles: true, detail: {name, startTime, currentInterval}});
+            document.dispatchEvent(startEvent);
+        }
+        startCount();
+    };
     this.stop = function () {
-        for (let id of timeoutId) {
-            clearTimeout(id);
-        }
-        timeoutId = [];
+        clearTimeout(timeoutId);
+        timeoutId = null;
     }
-    this.restart = restartCount()
+    this.restart = function () {
+        this.stop();
+        currentTime = startTime;
+        this.start();
+    }
+    this.setNewStartTime = function (newStartTime) {
+        if (Number.isInteger(newStartTime) && newStartTime > 0) {
+            startTime = newStartTime;
+        }
+    }
+    this.setNewInterval = function (newInterval) {
+        if (Number.isInteger(newInterval) && newInterval > 0) {
+            currentInterval = newInterval;
+        }
+    }
 }
-Countdown.count = 0;
 Countdown.instances = new Set();
 Countdown.getInstanceLength = function () {
-    return this.count
+    return this.instances.size;
 };
 Countdown.stopAll = function () {
     for (let countdown of this.instances) {
@@ -55,25 +70,21 @@ Countdown.stopAll = function () {
     }
 };
 
-let countdownConsole = new Countdown(ms => console.log(ms), timeCount.value*1000, interval.value*1000);
-start.onclick = () => {
-    this.dispatchEvent(eventStart);
-    this.dispatchEvent(eventDone);
-    countdownConsole.start()
-
-};
-stopCount.onclick = () => countdownConsole.stop();
-restart.onclick = () => countdownConsole.restart();
-
-
-
+let countdownMS = new Countdown(ms => console.log(ms), timeCount.value*1000, interval.value*1000, "ms Countdown");
+start.addEventListener("click", countdownMS.start);
+stopCount.onclick = () => countdownMS.stop();
+restart.onclick = () => countdownMS.restart();
+timeCount.oninput = () => countdownMS.setNewStartTime(+timeCount.value*1000);
+interval.oninput = () => countdownMS.setNewInterval(+interval.value*1000);
 
 
 let countdownConsoleS = new Countdown(ms => console.log(ms/1000), timeCount1.value*1000, interval1.value*1000);
 start1.onclick = () => countdownConsoleS.start();
 stopCount1.onclick = () => countdownConsoleS.stop();
 restart1.onclick = () => countdownConsoleS.restart();
+timeCount1.oninput = () => countdownMS.setNewStartTime(+timeCount1.value*1000);
+interval1.oninput = () => countdownMS.setNewInterval(+interval1.value*1000);
 
 stopAll.onclick = () => Countdown.stopAll();
 
-console.log(Countdown.getInstanceLength())
+console.log("Count of coundowns: ", Countdown.getInstanceLength())
