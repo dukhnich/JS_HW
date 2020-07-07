@@ -103,6 +103,10 @@ search("john");
 ```
 ### Timer
 ```javascript
+let timeoutId = Symbol ("timeout id");
+let currentTimesNumber = Symbol ("current times number");
+let startTimes = Symbol ("count of times at start");
+
 class Timer {
     /**
      * @param times {number}
@@ -111,74 +115,42 @@ class Timer {
      */
     constructor (times = 5, callback, interval = 1000) {
         this.callback = callback;
-        this.interval = interval;
-        this._timeoutId = null;
-        this._currentTimesNumber = times;
-        this._startTimes = times;
-    }
-
-    /**
-     * @param value {number/null}
-     */
-    set timeoutId(value) {
-        if ((!Number.isInteger(+value) && null != value) || value < 0) throw new Error("This is not timeout ID: " + value);
-        this._timeoutId = value;
-    }
-
-    /**
-     * @returns {number|null}
-     */
-    get timeoutId() {
-        return this._timeoutId;
-    }
+        this._interval = interval;
+        this[timeoutId] = null;
+        this[currentTimesNumber] = times;
+        this[startTimes] = times;
+    }   
 
     /**
      * @param value {number}
      */
-    set currentTimesNumber(value) {
-        if (!Number.isInteger(value) || value > this.startTimes) throw new Error("This is not a correct value: " + value);
-        this._currentTimesNumber = +value;
+    set interval(value) {
+        if (!Number.isInteger(+value) || value < 0) throw new Error("This is not a correct value for the interval: " + value);
+        this._interval = +value;
     }
 
     /**
      * @returns {number}
      */
-    get currentTimesNumber() {
-        return this._currentTimesNumber;
-    }
-
-    /**
-     * @param value {number}
-     */
-    set startTimes(value) {
-        if (!Number.isInteger(+value) || value < 0) throw new Error("This is not a correct value: " + value);
-        this._startTimes = +value;
-    }
-
-    /**
-     * @returns {number}
-     */
-    get startTimes() {
-        return this._startTimes;
+    get interval() {
+        return this._interval;
     }
 
     /**
      * @returns {Promise<unknown>}
      */
     async start() {
-        let res = await new Promise(resolve => {
-            this.timeoutId = setTimeout(() => resolve(this.callback(this.currentTimesNumber)), this.interval)
-        });
-        if (false !== res && this.currentTimesNumber-- > 0) {
+        await new Promise (resolve => this[timeoutId] = setTimeout(() => resolve (this.callback(this[currentTimesNumber])), this.interval));
+        if (this[currentTimesNumber]-- > 0) {
             this.start();
-            return res
+            return 
         }
-        this.currentTimesNumber = this.startTimes;
+        this[currentTimesNumber] = this[startTimes];
     };
 
     stop () {
-        clearTimeout(this.timeoutId);
-        this.timeoutId = null;
+        clearTimeout(this[timeoutId]);
+        this[timeoutId] = null;
     }
 }
 
