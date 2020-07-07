@@ -105,7 +105,6 @@ search("john");
 ```javascript
 let timeoutId = Symbol ("timeout id");
 let currentTimesNumber = Symbol ("current times number");
-let startTimes = Symbol ("count of times at start");
 
 class Timer {
     /**
@@ -118,7 +117,7 @@ class Timer {
         this._interval = interval;
         this[timeoutId] = null;
         this[currentTimesNumber] = times;
-        this[startTimes] = times;
+        this.startTimes = times;
     }   
 
     /**
@@ -140,17 +139,25 @@ class Timer {
      * @returns {Promise<unknown>}
      */
     async start() {
+        // if (this[timeoutId] !== null && this[currentTimesNumber] === this.startTimes) {
+        //     this.stop();
+        // }
+        this[timeoutId] = null;
         await new Promise (resolve => this[timeoutId] = setTimeout(() => resolve (this.callback(this[currentTimesNumber])), this.interval));
         if (this[currentTimesNumber]-- > 0) {
             this.start();
             return 
         }
-        this[currentTimesNumber] = this[startTimes];
+        this.stop();
     };
 
     stop () {
         clearTimeout(this[timeoutId]);
-        this[timeoutId] = null;
+        this[currentTimesNumber] = this.startTimes;
+    }
+
+    pause () {
+        clearTimeout(this[timeoutId]);
     }
 }
 
@@ -162,12 +169,20 @@ console.log("start");
 timer.start();
 setTimeout(() => {
     console.log("pause");
-    timer.stop()
+    timer.pause()
 }, 3000);
 setTimeout(() => {
     console.log("continue");
-    timer.start()
-}, 6000);
+    timer.start();
+}, 5000);
+setTimeout(() => {
+    console.log("stop");
+    timer.stop();
+}, 7000);
+setTimeout(() => {
+    console.log("new start");
+    timer.start();
+}, 8000);
 ```
 ### flatMap
 ```javascript
