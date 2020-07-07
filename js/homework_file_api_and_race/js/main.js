@@ -91,7 +91,7 @@ class ClickRace {
         this.container.prepend(progress);
         this.start = performance.now();
         this.progressLoop.call(this);
-        Promise.race([wait(this.time), this.raceClick.call(this)])
+        Promise.race([wait(this.time), this.raceClick(this.container, this.clickCount, this.time, this.start)])
             .then((res) => {
                 let result = document.createElement("div");
                 result.classList.add("alert", "alert-success");
@@ -127,31 +127,30 @@ class ClickRace {
         progress.appendChild(progressBar);
         return progress;
     }
-    raceClick() {
-        let container = this.container;
-        let count = this.clickCount;
-        let time = this.time;
-        let start = this.start;
+    raceClick(container, count, time, start) {
         return new Promise(function (resolve) {
-            container.onclick = function(event) {
+            function clickOnRaceEl (event) {
                 let clickPlace = event.target.closest('#clickPlace');
                 if (!clickPlace) return;
                 if (!container.contains(clickPlace)) return;
                 count--;
                 if (count === 0) {
-                    resolve (true)
+                    resolve(true)
                 }
                 clickPlace.innerText = `Click here ${count} times, left ${(time - (performance.now() - start)) / 1000} s`;
             }
+            container.removeEventListener("click", clickOnRaceEl);
+            container.addEventListener("click", clickOnRaceEl)
         })
     }
 
-    async progressLoop() {
-        while (true) {
-            progressBar.style.width = `${(this.time - (performance.now() - this.start)) * 100 / this.time}%`
-            await wait(100)
+    progressLoop() {
+        let pbar = document.getElementById("progressBar")
+        if (pbar) {
+            pbar.style.width = `${(this.time - (performance.now() - this.start)) * 100 / this.time}%`;
+            requestAnimationFrame(this.progressLoop.bind(this));
         }
     }
 }
 
-play.addEventListener("click", () => new ClickRace(gameContainer, countOfClick.value, time.value))
+play.addEventListener("click", () => new ClickRace(gameContainer, countOfClick.value, time.value));
