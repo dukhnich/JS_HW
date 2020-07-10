@@ -30,9 +30,14 @@
         <div id = "calendar"></div>
     </section>
     <section class="p-3">
-        <h2>Stories</h2>
-        <button type="button" id = "displayStories" class="btn btn-primary mt-4">Display stories</button>
-        <div id = "storiesWrapper"></div>
+        <h2 class = "mb-4">Stories</h2>
+        <div class="form-group d-flex">
+            <label class = "mr-3 mb-0">Time, s
+                <input type="number" min = 0 step = 0.1 class="form-control" id="time" aria-describedby="Time, seconds" value = 3>
+            </label>
+            <button type="button" id = "displayStories" class="btn btn-primary mt-4">Display stories</button>
+        </div>
+        <div class = "w-50" id = "storiesWrapper"></div>
     </section>
     <script  src='js/main.js'></script>
 </body>
