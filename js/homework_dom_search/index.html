@@ -16,11 +16,17 @@
         <h2 class = "mb-4">Content</h2>
         <form class="form-inline">
             <div class="form-group mx-sm-3 mb-2">
-                <label for="inputSearch" class="sr-only">Search</label>
-                <input type="text" class="form-control" id="inputSearch" placeholder="Search">
+                <label for="inputSearch" class="sr-only">Text for search</label>
+                <input type="text" class="form-control" id="inputSearch" placeholder="Text for search">
+                <button type="button" class="btn btn-primary ml-3" id = "searchBtn">Search</button>
+                <div class="alert alert-danger mb-0 ml-3 d-none" role="alert" id = "nothing">
+                    There are not any results!
+                </div>
             </div>
         </form>
-        <div id = "content"></div>
+        <div id = "content">
+            <h3>&gt;&gt;</h3>
+        </div>
     </section>
     <script  src='js/main.js'></script>
 </body>

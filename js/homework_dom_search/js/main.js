@@ -41,25 +41,32 @@ const directories = [
         dir: { name: "John" }
     }
 ];
+const content = document.getElementById("content");
+
 
 /**
  * @param container {HTMLElement}
  * @param data {{}}
  */
-function drawContent(container, data = directories) {
+(function drawContent(container, data) {
     let ul = document.createElement("ul");
+    container.onclick = (event) => {
+        event.stopPropagation();
+        ul.classList.toggle("d-none");
+    };
     for (let item of data) {
+        let li = document.createElement("li");
         if (Array.isArray(item.dir)) {
-            (drawContent(ul,item.dir));
+            li.innerText = ">>";
+            (drawContent(li,item.dir));
         }
         else {
-            let li = document.createElement("li");
             li.innerHTML = item.dir.name;
-            ul.appendChild(li);
         }
+        ul.appendChild(li);
     }
     container.appendChild(ul);
-}
+})(content, directories);
 
 /**
  * Search text in the HTML-container
@@ -67,27 +74,38 @@ function drawContent(container, data = directories) {
  * @param context {HTMLElement}
  */
 function search(request, context) {
-    clearSearch(context)
+    nothing.classList.add("d-none");
+    clearSearch(context);
+    if ("" === request) {
+        return
+    }
+    let result = 0;
     for (let item of context.children) {
         if (item.children.length > 0) {
-            search(request, item)
+            result += search(request, item);
         } else {
             if (item.innerText && item.innerText.toLowerCase().indexOf(request.toLowerCase()) > -1) {
-                let strWithoutRequest = item.innerText.toLowerCase().split(request.toLowerCase());
-                let newText = "";
-                let index = 0;
-                for (let substr of strWithoutRequest) {
-                    newText += item.innerText.slice(index, index + substr.length);
-                    index += substr.length;
-                    if (index < item.innerText.length) {
-                        newText += "<span class = 'searchText bg-warning'>" + item.innerText.slice(index, index + request.length) + "</span>";
-                        index += request.length;
-                    }
-                }
-                item.innerHTML = newText;
+                item.innerHTML = addSpan(item.innerText, request);
+                result++
             }
         }
     }
+    return result
+}
+
+function addSpan(str, spanText) {
+    let strWithoutRequest = str.toLowerCase().split(spanText.toLowerCase());
+    let newText = "";
+    let index = 0;
+    for (let substr of strWithoutRequest) {
+        newText += str.slice(index, index + substr.length);
+        index += substr.length;
+        if (index < str.length) {
+            newText += "<span class = 'searchText bg-warning'>" + str.slice(index, index + spanText.length) + "</span>";
+            index += spanText.length;
+        }
+    }
+    return newText;
 }
 
 /**
@@ -96,8 +114,8 @@ function search(request, context) {
 function clearSearch(context) {
     let searchResults = context.querySelectorAll(".searchText");
     for (let span of searchResults) {
-        let text = document.createTextNode(span.innerText);
-        span.parentElement.replaceChild(text, span);
+        let text = span.parentElement.textContent;
+        span.parentElement.textContent = text;
     }
 }
 
@@ -121,10 +139,20 @@ function debounce(fn, ms) {
  */
 function searchOninput(event) {
     event.preventDefault();
-    search(event.target.value, content)
+    // let done = false;
+    // let result = 0;
+    // for (let i = 0; i <=10; i++) {
+    //     let result0 = {};
+    //     result0 = search(searchEl.value, content.querySelector("ul")).next();
+    //     done = result0.done;
+    //     result = result0.value;
+    //     console.log (done, result, result0)
+    // }
+    if (search(searchEl.value, content.querySelector("ul")) === 0) {
+        nothing.classList.remove("d-none");
+    }
 }
 
-const content = document.getElementById("content");
-drawContent(content);
 const searchEl = document.getElementById("inputSearch");
-searchEl.addEventListener("input", debounce(searchOninput, 300));
+searchEl.addEventListener("input", debounce(searchOninput, 500));
+searchBtn.onclick = searchOninput;
