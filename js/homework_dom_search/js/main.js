@@ -10,7 +10,7 @@ const directories = [
     {
         dir: [
             {
-                dir: { name: "John" }
+                dir: { name: "J<b>o</b>hn" }
             },
             {
                 dir: { name: "hello" }
@@ -114,8 +114,21 @@ function addSpan(str, spanText) {
 function clearSearch(context) {
     let searchResults = context.querySelectorAll(".searchText");
     for (let span of searchResults) {
-        let text = span.parentElement.textContent;
-        span.parentElement.textContent = text;
+        let text = document.createTextNode(span.innerText);
+        let parent = span.parentElement
+        parent.replaceChild(text, span);
+        let newChildren = [...parent.childNodes].reduce(
+            (prev, current) => {
+                if (prev.length > 0 && 3 === prev[prev.length - 1].nodeType && 3 === current.nodeType) {
+                    prev[prev.length - 1].textContent += current.textContent;
+                    return prev
+                }
+                prev.push(current);
+                return prev
+            },
+            []);
+        parent.innerHTML = "";
+        parent.append(...newChildren)
     }
 }
 
