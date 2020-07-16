@@ -51,52 +51,34 @@ function wait(ms) {
     });
 }
 
-function equalArrays(arr1, arr2, strongEqual = false) {
-    if (arr1.length !== arr2.length) {
-        return false
-    }
-    for (let i = 0; i < arr1.length; i++) {
-        if (strongEqual && arr1[i] !== arr2 [i]) {
-            return false
-        }
-        if (!(arr1[i] in arr2)) {
-            return false
-        }
-    }
-    return true
-}
-
-function createAsyncButton(container,handler, {spinnerContainer = container, startClassList = [""], resolveClassList = startClassList, rejectClassList = startClassList, buttonText = "Button"} = {}){
+function createAsyncButton(container,handler, {
+    spinnerContainer = container, startClassList = [""], resolveClassList = startClassList, rejectClassList = startClassList, buttonText = "Button"
+} = {}){
     let button = document.createElement("button");
     button.type = "button";
     button.classList.add(...startClassList);
     button.innerText = buttonText;
-    button.onclick = async () => {
-        if (!equalArrays([...button.classList], startClassList)) {
-            button.classList.remove(...button.classList);
-            button.classList.add(...startClassList);
-        }
+    async function click(event) {
+        button.classList.remove(...button.classList);
+        button.classList.add(...startClassList);
         button.disabled = true;
         let spinner = document.createElement("div");
         spinnerContainer.appendChild(spinner);
         drawSpinner (spinner);
         try{
             await handler();
-            if (!equalArrays([...button.classList], resolveClassList)) {
-                button.classList.remove(...button.classList);
-                button.classList.add(...resolveClassList);
-            }
+            button.classList.remove(...button.classList);
+            button.classList.add(...resolveClassList);
         }
         catch (err) {
-            if (!equalArrays([...button.classList], rejectClassList)) {
-                button.classList.remove(...button.classList);
-                button.classList.add(...rejectClassList);
-            }
+            button.classList.remove(...button.classList);
+            button.classList.add(...rejectClassList);
         }
 
         spinner.remove();
         button.disabled = false;
-    };
+    }
+    button.addEventListener("click", click);
     container.appendChild(button);
     return button
 }
