@@ -1,4 +1,36 @@
 /**
+ * @param iterable {{}|*[]|Date}
+ * @returns {{}|*[]|Date}
+ */
+function shallowCopy (iterable) {
+    if (Array.isArray(iterable)) {
+        return [...iterable]
+    }
+    if (iterable instanceof Date) {
+        return new Date(iterable.toString())
+    }
+    if ("object" === typeof iterable) {
+        return {...iterable}
+    }
+}
+
+let a = { x: 1, y: 2, z: [1, 2, 3] };
+let b = shallowCopy(a); // b — это отдельный объект
+b.x = 10;
+console.log(a.x);
+b.z.push(4);
+console.log(a.z);
+let c = new Date(2020, 1, 1);
+let d = shallowCopy(c);
+d.setFullYear(2021);
+console.log(c.getFullYear()); // 2020
+let e = ["a", 1];
+let f = shallowCopy(c);
+f[0] = 0;
+console.log (e);
+
+
+/**
  * @param container {HTMLElement}
  */
 function drawSpinner (container) {
