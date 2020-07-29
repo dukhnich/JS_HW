@@ -11,49 +11,7 @@
     <title>Духнич Марина FEA18 JS HW 10</title>
 </head>
 <body>
-    <section class = "vh-100" id = 'messanger'>
-        <h1 class = "mb-5">ДЗ: Chat</h1>
-        <div class="form-row align-items-center mb-5">
-            <div class="col-sm-3 my-1">
-                <label class="sr-only" for="nickName">Nickname</label>
-                <div class="input-group">
-                    <div class="input-group-prepend">
-                        <div class="input-group-text">@</div>
-                    </div>
-                    <input type="text" class="form-control" id="nickName" placeholder="Nickname">
-                </div>
-            </div>
-            <div class="col-auto my-1 ml-auto">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="shortHistoryCheck">
-                    <label class="form-check-label" for="shortHistoryCheck">
-                        I want to see just part of history
-                    </label>
-                </div>
-            </div>
-            <div class="col-sm-3 my-1">
-                <label class="sr-only" for="numberForShortHistory">Number of displayed messanges</label>
-                <div class="input-group">
-                    <div class="input-group-prepend">
-                        <div class="input-group-text">Number of displayed messanges</div>
-                    </div>
-                    <input type="number" min = '1' step = '1' class="form-control" id="numberForShortHistory" disabled>
-                </div>
-            </div>
-        </div>
-        <!--  <button type="button" disabled class="btn btn-primary mb-5" id = 'historyBtn'>History with this user</button>-->
-
-        <div class = "mb-5 bg-light p-3" style = "height: 60%">
-            <div class = "overflow-auto mh-100 d-flex flex-wrap p-3" id = "historyWrapper"></div>
-        </div>
-
-        <div class="input-group mb-3">
-            <div class="input-group-prepend">
-                <span class="input-group-text">Message</span>
-            </div>
-            <textarea class="form-control" id="newMsg" aria-label="Message"></textarea>
-        </div>
-        <button type="button" disabled class="btn btn-primary" id = 'sendMsgBtn'>Send</button>
+    <section class = "vh-100" id = 'messenger'>
     </section>
     <script  src='js/main.js'></script>
 </body>
