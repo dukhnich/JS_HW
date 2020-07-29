@@ -252,19 +252,19 @@ class Timer {
      * @returns {Promise<unknown>}
      */
     async start() {
-        // if (this[status]) {
-        //     this.stop();
-        //     this.start();
-        // }
+
         this[status] = true;
         async function cb() {
+            console.log(this[currentTimesNumber]);``
             await this.callback(this[currentTimesNumber]);
             if (this[currentTimesNumber]-- === 0) {
                 this.stop();
             }
         };
         await cb.call(this);
-        this[timeoutId] = setInterval(cb.bind(this), this.interval);
+        if (this[currentTimesNumber] !== 0) {
+            this[timeoutId] = setInterval(cb.bind(this), this.interval);
+        }
     };
 
     stop () {
@@ -300,94 +300,85 @@ class Stories {
     }
 
     nextImg (imgNum) {
-        cancelAnimationFrame(this[animationID])
+        cancelAnimationFrame(this[animationID]);
+        if (this[status] === false) {
+            for (let i = 0; i < this[images].length; i++) {
+                let pbar = document.getElementById(`progressBar${i}`);
+                pbar.style.width = "0%";
+            }
+        }
+        let currentNumber = this[images].length - 1 - imgNum;
+
         let start = performance.now();
-        let progress = this.container.querySelector("div.progress");
-        progress.innerHTML = "";
-        progress.appendChild(this.drawProgress());
-        this.progressLoop(start);
+        this.progressLoop(start, currentNumber);
+
         let img = document.getElementById("storyImg");
         if (null === img) {
             img = document.createElement('img');
             img.id = "storyImg"
         }
-        let currentNumber = this[images].length - 1 - imgNum;
+
+
         img.alt = currentNumber.toString();
         img.classList.add("img-fluid", "w-100", "mw-100");
         img.style = "height: auto; background-size: cover";
         img.src = this[images][currentNumber];
-        img.onclick = this.imgClick.bind(this);
+        img.onclick = this.enter.bind(this);
+        img.ondblclick = this.leave.bind(this);
         if (currentNumber === this[images].length - 1) {
             this[status] = false;
-            cancelAnimationFrame(this[animationID])
         }
         this.container.append (img);
-
-        let preview = previewWrapper.querySelector(`img:nth-of-type(${currentNumber + 1})`);
-        preview.classList.add("border", "border-primary", "img-thumbnail");
-        if (currentNumber === 0) {
-            let last = previewWrapper.querySelector(`img:nth-of-type(${this[images].length})`);
-            last.classList.remove("border", "border-primary", "img-thumbnail");
-            return
-        }
-        let prev = previewWrapper.querySelector(`img:nth-of-type(${currentNumber})`);
-        prev.classList.remove("border", "border-primary", "img-thumbnail");
     }
 
     get status () {
         return this[status];
     }
 
-    imgClick () {
-        if (this.status) {
-            this.timer.pause();
-            this[status] = false;
-            cancelAnimationFrame(this[animationID]);
-            return
-        }
+    enter () {
+        this.timer.pause();
+        // this[status] = false;
+        cancelAnimationFrame(this[animationID]);
+    }
+
+    leave () {
         this.timer.start();
         this[status] = true;
-
     }
 
     async drawGallery () {
         this.container.innerHTML = "";
-        let progress = document.createElement("div");
-        progress.classList.add("progress", "mb-3");
-        this.container.append(await this.drawPreview(), progress);
+        let progressWrapper = document.createElement("div");
+        progressWrapper.classList.add("d-flex");
+        for (let i = 0; i < this[images].length; i++) {
+            progressWrapper.appendChild(this.drawProgress(i));
+        }
+        this.container.append( progressWrapper);
         this[status] = true;
         this.timer.start();
     }
 
-    drawProgress() {
+    drawProgress(num) {
+        let progress = document.createElement("div");
+        progress.classList.add("progress", "mb-3");
+        progress.style.width = 100 / this[images].length + "%";
         let progressBar = document.createElement("div");
         progressBar.classList.add("progress-bar", "progress-bar-striped", "bg-info");
         progressBar.setAttribute("role", "progressbar");
-        progressBar.id = "progressBar";
+        progressBar.id = `progressBar${num}`;
         progressBar.style.width = "0%";
-        return progressBar;
+        progress.appendChild(progressBar);
+        return progress;
     }
 
-    drawPreview() {
-        let previewWrapper = document.createElement("div");
-        previewWrapper.id = "previewWrapper";
-        previewWrapper.classList.add("d-flex", "mb-3");
-        for (let image of this[images]){
-            let img = document.createElement('img');
-            img.style = `width: ${Math.ceil(100/this[images].length)}%;`;
-            img.src = image;
-            previewWrapper.appendChild(img)
-        }
-        return previewWrapper;
-    }
-
-    progressLoop(start) {
-        let pbar = document.getElementById("progressBar");
+    progressLoop(start, num) {
+        let pbar = document.getElementById(`progressBar${num}`);
         let now = performance.now();
-        if (pbar) {
-            let persent = +pbar.style.width.slice(0, pbar.style.width.length - 2) ;
-            pbar.style.width = `${(now - start) * 100 / this[interval] + persent}%`;
-            this[animationID] = requestAnimationFrame(this.progressLoop.bind(this, start));
+        let percent = +pbar.style.width.slice(0, pbar.style.width.length - 2) ;
+        if (pbar && percent <= 100) {
+            pbar.style.width = `${(now - start) * 100     
+            / (this[interval]* this[images].length ) + percent}%`;
+            this[animationID] = requestAnimationFrame(this.progressLoop.bind(this, start, num));
             return
         }
         cancelAnimationFrame(this[animationID]);
