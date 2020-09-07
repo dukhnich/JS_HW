@@ -75,26 +75,37 @@ class MyChat {
         this.nextMessageId = 0;
         this.messageInput = null;
         this.sendMsgBtn = null;
+        this.isSendPict = false;
         this.historyWrapper = null;
         this.numberForShortHistory = null;
         this.shortHistoryCheck = null;
         this.spinnerWrapper = null;
+        this.clearCanvasBtn = null;
+
+        this.canvas = null;
+        this.canvasCurrentTool = "select";
+        this.canvasActiveTool = null;
+        this.canvasCurrentFill = true;
+        this.canvasCurrentColor = "000000";
+        this.canvasCurrentSize = 10;
+        
         this.initChat.call(this, this.wrapper);
     }
 
-    initChat(wrapper, name = "My chat") {
+    async initChat(wrapper, name = "My chat") {
         wrapper.innerHTML = "";
         let fragment = document.createDocumentFragment();
         let h2 = createElWithTextAndClass ("h2", name, "mb-5");
         this.spinnerWrapper = createElWithTextAndClass ("div", "", "invisible d-flex justify-content-center");
         this.spinnerWrapper.innerHTML = MyChat.spinnerHTML;
-        let historyBackground = createElWithTextAndClass ("div", "", "mb-5 bg-light p-3");
-        historyBackground.style.height = "60%";
+        let historyBackground = createElWithTextAndClass ("div", "", "mb-5 h-50 bg-light p-3");
+        // historyBackground.style.height = "60%";
         let historyWrapper = createElWithTextAndClass ("div", "", "overflow-auto mh-100 d-flex flex-wrap p-3");
         this.historyWrapper = historyWrapper;
         historyBackground.append(historyWrapper);
         fragment.append(h2, this.drawControlPanel.call(this), this.spinnerWrapper, historyBackground, this.drawMessagePanel.call(this));
         wrapper.append(fragment);
+        await this.getMessages.call(this, this.historyWrapper, this.currentUser);
         this.checkLoop.call(this, this.historyWrapper);
     }
 
@@ -125,9 +136,12 @@ class MyChat {
          * @param event {Event}
          */
         async function typeNick(event) {
-            this.currentUser.nick = nickInput.value;
-            this.nextMessageId = 0;
-            await this.getMessages.call(this, this.historyWrapper, this.currentUser);
+            if (this.currentUser.nick !== nickInput.value) {
+                this.currentUser.nick = nickInput.value;
+                this.nextMessageId = 0;
+                this.historyWrapper.innerHTML = "";
+                await this.getMessages.call(this, this.historyWrapper, this.currentUser);
+            }
         }
         nickInput.addEventListener("input", debounce(typeNick.bind(this), 500));
         nickGroup.append(nickPrepend,nickInput);
@@ -220,39 +234,55 @@ class MyChat {
         this.messageInput.oninput = function ( ) {
             this.sendMsgBtn.disabled = !(this.messageInput.value && this.currentUser.nick);
             this.messageInput.classList.remove('is-invalid');
-            // this.numberForShortHistory.classList.add('is-invalid');
         }.bind ( this );
 
         this.messageInput = messageInput;
-        messageGroup.append(messagePrepend,messageInput, this.drawSendBtn.call(this));
-        fragment.append(messageGroup, this.drawEmojiPanel.call(this));
+        messageGroup.append(messagePrepend,messageInput, this.drawSendBtnGroup.call(this));
+        fragment.append(messageGroup, this.drawAttachPanel.call(this));
         return fragment
     }
 
-    drawSendBtn () {
-        let sendMsgBtn = createElWithTextAndClass ("button", "Send", "btn btn-primary");
-        sendMsgBtn.disabled = true;
-        sendMsgBtn.id = "sendMsgBtn";
-        this.sendMsgBtn = sendMsgBtn;
+    drawSendBtnGroup () {
+        let sendWrapper = createElWithTextAndClass("div", "", "ml-2 d-flex flex-column justify-content-between")
+        let sendPictCheckGroup = createElWithTextAndClass ("div", "", "form-check");
+        let sendPictCheckbox = createElWithTextAndClass ("input", "", "form-check-input");
+        sendPictCheckbox.id = "sendPictCheckbox";
+        sendPictCheckbox.type = "checkbox";
+        sendPictCheckbox.onclick = function () {
+            this.isSendPict = !this.isSendPict
+        }.bind ( this );
+        let sendPictCheckLabel = createElWithTextAndClass ("label", "Send picture", "form-check-label");
+        sendPictCheckLabel.setAttribute("for", "sendPictCheckbox");
+        sendPictCheckGroup.append(sendPictCheckbox,sendPictCheckLabel);
+
+        this.sendMsgBtn = createElWithTextAndClass ("button", "Send", "btn btn-primary");
+        this.sendMsgBtn.disabled = true;
+        // this.sendMsgBtn.id = "sendMsgBtn";
+        this.sendMsgBtn.type = "button";
         this.sendMsgBtn.onclick = async function () {
             this.sendMsgBtn.disabled = true;
             let emoji = /:(.*?):/g;
             let input = this.messageInput.value;
-            let msg = "";
+            let msg = "<p>";
+            let text = "";
             let result;
             let index = 0;
             while ((result = emoji.exec(input)) !== null) {
                 if (!(Object.values(MyChat.emoji).flat().includes(result[0]))) {
-                    msg += input.slice(index, emoji.lastIndex);
+                    text += input.slice(index, emoji.lastIndex);
                 }
                 else {
                     let currentEmoji = result[0].slice(1, result[0].length - 1);
-                    msg += input.slice(index, emoji.lastIndex - result[0].length);
-                    msg += "<img src=\"" + MyChat.emojiLink + currentEmoji + `.png" style="width: 20px; cursor=pointer;" alt="${currentEmoji}">`;
+                    text += input.slice(index, emoji.lastIndex - result[0].length);
+                    text += "<img src=\"" + MyChat.emojiLink + currentEmoji + `.png" style="width: 20px; cursor=pointer;" alt="${currentEmoji}">`;
                 }
                 index = emoji.lastIndex;
             }
-            msg += input.slice(index);
+            text += input.slice(index);
+            msg += text + "</p>";
+            if (this.isSendPict) {
+                msg += `<img src = ${this.canvas.toDataURL()} alt = "picture from canvas">`;
+            }
             let num = await this.sendAndCheck(this.historyWrapper, this.currentUser, msg);
             if (num >= this.nextMessageId) {
                 this.messageInput.value = '';
@@ -260,18 +290,26 @@ class MyChat {
             }
             this.messageInput.classList.add('is-invalid');
         }.bind ( this );
-        return sendMsgBtn
+        sendWrapper.append(sendPictCheckGroup, this.sendMsgBtn)
+        return sendWrapper;
     }
 
+    drawAttachPanel () {
+        let wrapper = createElWithTextAndClass ("div", "", "d-flex justify-content-between align-items-start");
+        wrapper.append(this.drawEmojiPanel.call(this), this.drawCanvasPanel.call(this));
+        return wrapper
+    };
+
     drawEmojiPanel () {
-        let fragment = document.createDocumentFragment();
-        let nav = createElWithTextAndClass ("nav", "", "");
-        let comment = createElWithTextAndClass ("p", "To send the emoji paste its name to your message","small")
+        let wrapper = createElWithTextAndClass("div", "", "w-50 pr-5");
+        let nav = createElWithTextAndClass ("nav", "", "d-flex justify-content-between");
+        let comment = createElWithTextAndClass ("div", "To send the emoji paste its name to your message","alert alert-secondary small m-0");
+        comment.role = "alert";
         let tabs = createElWithTextAndClass ("div", "", "nav nav-tabs");
         tabs.role = "tablist";
         tabs.id = "emojiTabs";
-        nav.append(comment, tabs);
-        let content = createElWithTextAndClass ("div", "", "tab-content");
+        nav.append(tabs, comment);
+        let content = createElWithTextAndClass ("div", "", "tab-content mt-2");
         content.id = "emojiContent";
         for (let [group, emojis] of Object.entries(MyChat.emoji)) {
             let a = createElWithTextAndClass ("a", group, "nav-item nav-link");
@@ -293,14 +331,14 @@ class MyChat {
         tabs.querySelector("a").classList.add("active");
         tabs.querySelector("a").setAttribute("aria-selected", "true");
 
-        fragment.append(nav, content);
-        return fragment
+        wrapper.append(nav, content);
+        return wrapper
     }
 
     drawEmojiGroup(emojiGroup){
         let container = createElWithTextAndClass ("div", "", "container m-0");
-        container.style.maxWidth = "100%";
-        let columnsNumber = 6;
+        // container.style.maxWidth = "100%";
+        let columnsNumber = 3;
         for (let i = 0; i < Math.ceil(emojiGroup.length/columnsNumber); i++) {
             let row = createElWithTextAndClass ("div", "", "row");
             for (let j = 0; (j < columnsNumber) && ((i*columnsNumber + j) < emojiGroup.length); j++) {
@@ -317,6 +355,170 @@ class MyChat {
         }
         return container
     }
+    drawCanvasPanel () {
+        let panel = createElWithTextAndClass ("div", "", "card text-center w-50");
+        let header = createElWithTextAndClass ("div", "", "card-header d-flex justify-content-between align-items-center");
+        header.append(this.drawCanvasControls(), this.drawBrushSize(), this.drawCanvasColour());
+        let body = createElWithTextAndClass ("div", "", "card-body bg-dark");
+        body.append(this.drawCanvas.call(this));
+        let footer = createElWithTextAndClass ("div", "", "card-footer d-flex justify-content-between");
+        footer.append(this.drawCanvasFooter());
+        panel.append(header, body, footer);
+        return panel
+    }
+
+    drawCanvasFooter = () => {
+        let fragment = document.createDocumentFragment();
+        this.clearAllBtn = this.drawBtnWithIcon(
+            "Clear all",
+            {
+                currentClass: "bi-trash-fill",
+                content: `<path fill-rule="evenodd" d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0v-7z"/>`
+            }
+        );
+        this.clearSelectionBtn = this.drawBtnWithIcon(
+            "Clear selection",
+            {
+                currentClass: "bi-trash",
+                content: `<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>`
+            }
+        );
+        fragment.append(this.clearAllBtn, this.clearSelectionBtn);
+        return fragment
+    };
+
+    drawCanvasControlGroup = createElCreator(function (div, label) {
+        div.classList.add("d-flex", "align-items-center");
+        div.innerHTML = `<span class = "text-muted small mr-2">${label}</span>`;
+        return div
+    });
+
+    drawBrushSize = () => {
+        let wrapper = this.drawCanvasControlGroup("div", "Size", "mr-2");
+        let input = createElWithTextAndClass ("input", "", "form-control");
+        input.type = "number";
+        input.value = 5;
+        input.max = 400;
+        input.min = 1;
+        input.style.width = "70px";
+        input.oninput = () => {
+            this.canvasCurrentSize = input.value
+        };
+        wrapper.append(input);
+        return wrapper
+    };
+
+    drawCanvasColour = () => {
+        let wrapper = this.drawCanvasControlGroup("div", "Color", "mr-2");
+        let input = createElWithTextAndClass ("input", "", "form-control");
+        input.type = "color";
+        input.value = "#000000";
+        input.style.width = "50px";
+        input.oninput = () => {
+            this.canvasCurrentColor = input.value
+        };
+        wrapper.append(input);
+        return wrapper
+    };
+
+    drawCanvasControls = () => {
+        let fragment = document.createDocumentFragment();
+        for (let [controlGroupName, controlGroup] of Object.entries(MyChat.canvasControlElements)) {
+            let wrapper = this.drawCanvasControlGroup("div", controlGroupName, "mr-2");
+            let radioGroup = createElWithTextAndClass("div", "", "");
+            let {current, active, values} = controlGroup;
+            for (let i = 0; i < values.length; i++) {
+                let {name, currentClass, content} = values [i];
+                let radioWrapper = this.drawCanvasControlElement(name, currentClass, content, current, active);
+                if (i === 0) {
+                    this[active] = radioWrapper;
+                    this[active].classList.toggle("border");
+                }
+                radioGroup.append(radioWrapper)
+            }
+            wrapper.append(radioGroup);
+            fragment.append(wrapper)
+        }
+        return fragment
+    };
+
+    drawCanvasControlElement = (name, currentClass, content,  current, active) => {
+        let tool = createElWithTextAndClass ("div", "", "form-check form-check-inline mr-1 p-1");
+        let label = document.createElement("label");
+        label.classList.add("mb-0");
+        label.setAttribute("aria-label", "tool " + name);
+        let radioBtn = createElWithTextAndClass ("input", "","d-none");
+        radioBtn.name = "tool";
+        radioBtn.value = name;
+        let svg = this.drawIcon(currentClass, content);
+        label.append(radioBtn,svg);
+        tool.append(label);
+        tool.onclick = () => this.changeTool(tool, name, current, active);
+        return tool
+    };
+
+    changeTool = (el, newTool, current, active) => {
+        this[active].classList.toggle("border");
+        this[active] = el;
+        this[current] = newTool;
+        this[active].classList.toggle("border")
+    };
+
+    drawCanvas () {
+        this.canvas = createElWithTextAndClass ("canvas", "", "bg-white");
+        this.canvas.width = "400";
+        this.canvas.height = "400";
+        return this.canvas
+    }
+
+    drawBtnWithIcon = (text = "Button", {currentClass, content} = {}) => {
+        let svg = this.drawIcon(currentClass, content);
+        svg.classList.add("mr-2");
+        let button = createElWithTextAndClass ("button", text, "btn btn-primary");
+        button.type = "button";
+        button.prepend(svg);
+        return button
+};
+
+    drawClearCanvasSelectionBtn () {
+        let trash = this.drawIcon("bi-trash-fill",
+            `<path fill-rule="evenodd" d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0v-7z"/>`
+        );
+        trash.classList.add("mr-2");
+        this.clearCanvasBtn = createElWithTextAndClass ("button", "Clear canvas", "btn btn-primary");
+        this.clearCanvasBtn.type = "button";
+        this.clearCanvasBtn.prepend(trash);
+        this.clearCanvasBtn.onclick = function () {
+            Drawable.clearAll();
+        };
+        return this.clearCanvasBtn
+    }
+
+    drawClearCanvasBtn () {
+        let trash = this.drawIcon("bi-trash-fill",
+    `<path fill-rule="evenodd" d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0v-7z"/>`
+        );
+        trash.classList.add("mr-2")
+        this.clearCanvasBtn = createElWithTextAndClass ("button", "Clear canvas", "btn btn-primary");
+        this.clearCanvasBtn.type = "button";
+        this.clearCanvasBtn.prepend(trash);
+        this.clearCanvasBtn.onclick = function () {
+            Drawable.clearAll();
+        };
+        return this.clearCanvasBtn
+    }
+
+    drawIcon (currentClass, content, {size = "1em", sizeBox = 16, color = "currentColor", classes = ["bi", "mb-1"]} = {}) {
+        let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add(currentClass, ...classes);
+        svg.setAttribute("width",size);
+        svg.setAttribute("height", size);
+        svg.setAttribute("viewBox", `0 0 ${sizeBox} ${sizeBox}`);
+        svg.setAttribute("fill", color);
+        svg.innerHTML = content;
+        return svg
+    };
 
     /**
      * @param user {{}}
@@ -328,7 +530,6 @@ class MyChat {
         let obj = await jsonPostFetch("http://students.a-level.com.ua:10012", {func: 'addMessage', nick: nick, message: message});
         return obj.nextMessageId;
     }
-
     /**
      * @param place {HTMLElement}
      * @param user {{}}
@@ -342,6 +543,8 @@ class MyChat {
                 messageId: this.nextMessageId
             });
             this.nextMessageId = historyMsg.nextMessageId; //Stage 3
+            // console.log(historyMsg.nextMessageId, this.nextMessageId)
+
             this.numberForShortHistory.setAttribute('max', String(this.nextMessageId));
             if (this.shortHistoryCheck.checked) {
                 this.nextMessageId -= this.numberForShortHistory.value;
@@ -372,7 +575,6 @@ class MyChat {
             console.error('jsonPost failed: ', error);
         }
     }
-
     /**
      * @param place {HTMLElement}
      * @param user {{}}
@@ -386,7 +588,6 @@ class MyChat {
         }
         return num;
     }
-
     /**
      * @param place {HTMLElement}
      * @returns {Promise<void>}
@@ -397,7 +598,6 @@ class MyChat {
             await delay(5000)
         }
     }
-
     /**
      * @type {(function(*=, ...[*]): HTMLElement)|HTMLElement}
      */
@@ -464,6 +664,57 @@ MyChat.spinnerHTML =
         <span class="sr-only d-block">Loading...</span>
     </div>`;
 
+MyChat.canvasControlElements = {
+    Tools: {
+        current: "canvasCurrentTool",
+        active: "canvasActiveTool",
+        values: [
+        {
+            name: "select",
+            currentClass: "bi-cursor-fill",
+            content: `<path fill-rule="evenodd" d="M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z"/>`
+        },
+        {
+            name: "graffity",
+            currentClass: "bi-brush",
+            content: `<path d="M15.213 1.018a.572.572 0 0 1 .756.05.57.57 0 0 1 .057.746C15.085 3.082 12.044 7.107 9.6 9.55c-.71.71-1.42 1.243-1.952 1.596-.508.339-1.167.234-1.599-.197-.416-.416-.53-1.047-.212-1.543.346-.542.887-1.273 1.642-1.977 2.521-2.35 6.476-5.44 7.734-6.411z"/>
+                            <path d="M7 12a2 2 0 0 1-2 2c-1 0-2 0-3.5-.5s.5-1 1-1.5 1.395-2 2.5-2a2 2 0 0 1 2 2z"/>
+                            `
+        },
+        {
+            name: "line",
+            currentClass: "bi-slash",
+            content: `<path fill-rule="evenodd" d="M11.854 4.146a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708-.708l7-7a.5.5 0 0 1 .708 0z"/>`
+        },
+        {
+            name: "circle",
+            currentClass: "bi-circle-fill",
+            content: `<circle cx="8" cy="8" r="8"/>`
+        },
+        {
+            name: "rectangle",
+            currentClass: "bi-square-fill",
+            content: `<path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2z"/>`
+        }
+    ]
+    },
+    Fill: {
+        current: "canvasCurrentFill",
+        active: "canvasActiveFill",
+        values: [
+            {
+                name: true,
+                currentClass: "bi-square-fill",
+                content: `<path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2z"/>`
+            },
+            {
+                name: false,
+                currentClass: "bi-square",
+                content: `<path fill-rule="evenodd" d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>`
+            }
+        ]
+    }
+};
 MyChat.emojiLink = "https://www.webfx.com/tools/emoji-cheat-sheet/graphics/emojis/";
 MyChat.emoji = {
     people: [
@@ -1355,9 +1606,269 @@ MyChat.emoji = {
     ]
 };
 
+
 /**
  * Init chat
  * @type {MyChat}
  */
 const chat = new MyChat(document.getElementById("messenger"));
 
+const canvas = chat.canvas;
+const ctx    = canvas.getContext('2d');
+
+const width  = canvas.width;
+const height = canvas.height;
+
+let current;
+let selection = [];
+
+const tools = {
+    graffity: {
+        mousemove(e){ //e.buttons 0b00000x11 & 0b00000100 == x
+            (e.buttons & 1) && new Circle(e.offsetX, e.offsetY, chat.canvasCurrentSize, chat.canvasCurrentColor, chat.canvasCurrentFill)
+        }
+    },
+    circle: {
+        mousedown(e){
+            current = new Circle(e.offsetX,e.offsetY, 1, chat.canvasCurrentColor, chat.canvasCurrentFill)
+        },
+        mousemove(e){
+            if (!current) return;
+
+            current.radius = current.distanceTo(e.offsetX, e.offsetY);
+            Drawable.drawAll()
+        },
+
+        mouseup(e){
+            current = null
+        }
+    },
+    line: {
+        mousedown(e){
+            current = new Line(e.offsetX, e.offsetY, 0, 0, chat.canvasCurrentColor, chat.canvasCurrentSize)
+        },
+        mousemove(e){
+            if (!current) return;
+
+            current.width = e.offsetX - current.x;
+            current.height = e.offsetY - current.y;
+
+            Drawable.drawAll();
+        },
+
+        mouseup(e){
+            current = null
+        }
+    },
+    select: {
+        click(e){
+            let found = Drawable.instances.filter(c => c.in && c.in(e.offsetX, e.offsetY))
+            if (found.length){
+                if (e.ctrlKey){
+                    selection.push(found.pop())
+                }
+                else {
+                    selection = [found.pop()]
+                }
+            }
+            else {
+                if (!e.ctrlKey) selection = []
+            }
+
+            Drawable.drawAll(selection)
+        },
+        mousedown(e){
+            //
+        },
+        mousemove(e){
+
+        },
+
+        mouseup(e){
+            //x,y, w, h прямоугольника
+            //selection - только те элеменеты Drawable.instances которые в границах прямоугольника.
+        },
+    },
+    rectangle: {
+        mousedown(e){
+            current = new Rectangle(e.offsetX, e.offsetY, 0, 0, chat.canvasCurrentColor, chat.canvasCurrentSize, chat.canvasCurrentFill)
+        },
+        mousemove(e){
+            if (!current) return;
+
+            current.width = e.offsetX - current.x;
+            current.height = e.offsetY - current.y;
+
+            Drawable.drawAll()
+        },
+
+        mouseup(e){
+            current = null
+        }
+    },
+};
+
+function superHandler(evt){
+    let t = tools[chat.canvasCurrentTool];
+    if (typeof t[evt.type] === 'function')
+        t[evt.type].call(this, evt)
+}
+
+canvas.onmousemove = superHandler;
+canvas.onmouseup   = superHandler;
+canvas.onmousedown = superHandler;
+canvas.onclick = superHandler;
+
+function Drawable(){
+    Drawable.addInstance(this);
+}
+
+const distance = (x1,y1, x2, y2) => ((x1-x2)**2 + (y1-y2)**2)**0.5
+
+Drawable.prototype.draw = function(){};
+Drawable.prototype.distanceTo = function(x,y){
+    if (typeof this.x !== 'number' ||
+        typeof this.y !== 'number'){
+        return NaN
+    }
+    return distance(this.x, this.y, x, y)
+};
+Drawable.instances = [];
+Drawable.addInstance = function(item){
+    Drawable.instances.push(item);
+};
+
+Drawable.clearAll = function(){
+    ctx.clearRect(0,0,width,height);
+    Drawable.instances = [];
+    selection = [];
+};
+
+Drawable.clearSelection = function(){
+    Drawable.instances = Drawable.instances.filter(item => !selection.includes(item));
+    selection = [];
+    Drawable.drawAll()
+};
+
+Drawable.drawAll = function(selection=[]){
+    ctx.clearRect(0,0,width,height);
+    Drawable.forAll(item => item.draw(selection.includes(item)));
+};
+
+Drawable.forAll = function(callback){
+    for(let i = 0; i<Drawable.instances.length;i++){
+        callback(Drawable.instances[i])
+    }
+};
+
+class Circle extends Drawable {
+    constructor(x,y,radius, color, fill){
+        super();
+        this.x      = x;
+        this.y      = y;
+        this.radius = radius;
+        this.color  = color;
+        this.fill = fill;
+        this.draw();
+    }
+
+    draw(selected){
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+        ctx.closePath();
+        if (selected){
+            ctx.setLineDash([5, 15])
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else {
+            ctx.setLineDash([]);
+        }
+        if (this.fill) {
+            ctx.fillStyle = this.color;
+            ctx.fill()
+        }
+        else {
+            ctx.strokeStyle = this.color;
+            ctx.stroke();
+        }
+    }
+
+    in(x,y){
+        return this.distanceTo(x,y) < this.radius
+    }
+
+    inBounds(x,y,w,h){ // x = 100, this.x = 102, w = 5
+        return this.x >= x && this.x <= x + w &&
+            this.y >= y && this.y <= y + h
+    }
+}
+
+
+class Line extends Drawable {
+    constructor(x,y, width, height, color, lineWidth){
+        super();
+        this.x      = x;
+        this.y      = y;
+        this.width  = width;
+        this.height = height;
+        this.color  = color;
+        this.lineWidth  = lineWidth;
+
+        this.draw();
+    }
+
+    draw(){
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.width, this.y + this.height);
+        ctx.closePath();
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth   = this.lineWidth
+        ctx.stroke();
+    }
+}
+
+class Rectangle extends Drawable {
+    constructor(x,y, width, height, color, lineWidth, fill){
+        super();
+        this.x      = x;
+        this.y      = y;
+        this.width  = width;
+        this.height = height;
+        this.color  = color;
+        this.lineWidth  = lineWidth;
+        this.fill = fill;
+
+        this.draw();
+    }
+
+    draw(selected){
+        if (!selected) {
+            ctx.setLineDash([]);
+            if (this.fill) {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height)
+            } else {
+                ctx.beginPath();
+                ctx.lineWidth = this.lineWidth;
+                ctx.strokeStyle = this.color;
+                ctx.rect(this.x, this.y, this.width, this.height);
+                ctx.stroke();
+            }
+        } else {
+            ctx.setLineDash([5,15]);
+            ctx.beginPath();
+            ctx.lineWidth = this.lineWidth;
+            ctx.strokeStyle = this.color;
+            ctx.rect(this.x, this.y, this.width, this.height);
+            ctx.stroke();
+        }
+    }
+
+    in(x,y){
+        return x > this.x && x < (this.x + this.width) && y > this.y && y < (this.y + this.height)
+    }
+}
+
+chat.clearAllBtn.addEventListener("click", Drawable.clearAll);
+chat.clearSelectionBtn.addEventListener("click", Drawable.clearSelection);
